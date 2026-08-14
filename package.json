@@ -1,0 +1,20 @@
+{
+  "name": "nipris-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nigeria Integrated Police Records Intelligence System (NIPRIS) Monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "turbo": "^1.13.0",
+    "typescript": "^5.4.0"
+  }
+}
