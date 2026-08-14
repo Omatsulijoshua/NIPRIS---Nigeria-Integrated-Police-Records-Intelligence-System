@@ -1,0 +1,297 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum OrgLevel {
+  NATIONAL_HQ
+  STATE_COMMAND
+  AREA_COMMAND
+  DIVISION
+  POLICE_STATION
+  SPECIAL_UNIT
+}
+
+enum OfficerRole {
+  NATIONAL_SUPER_ADMIN
+  NATIONAL_COMMAND_ADMIN
+  STATE_COMMAND_ADMIN
+  AREA_COMMAND_ADMIN
+  DIVISION_ADMIN
+  STATION_COMMANDER
+  INVESTIGATING_OFFICER
+  PATROL_OFFICER
+  EVIDENCE_OFFICER
+  BODYCAM_ADMIN
+  FORENSIC_OFFICER
+  AUDITOR
+  INTERNAL_AFFAIRS
+  COURT_INTEGRATION
+  READ_ONLY_VIEWER
+}
+
+enum LegalStatus {
+  ARREST
+  CHARGE
+  PROSECUTION
+  CONVICTION
+  ACQUITTAL
+  DISMISSED
+  PENDING
+  RELEASED
+}
+
+enum WarrantStatus {
+  ACTIVE
+  EXECUTED
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+enum ClassificationLevel {
+  PUBLIC
+  INTERNAL
+  LAW_ENFORCEMENT_RESTRICTED
+  HIGHLY_RESTRICTED
+  SEALED
+  BIOMETRIC_RESTRICTED
+  EVIDENCE_RESTRICTED
+}
+
+model Organization {
+  id          String         @id @default(uuid())
+  code        String         @unique
+  name        String
+  level       OrgLevel
+  parentId    String?
+  parent      Organization?  @relation("OrgHierarchy", fields: [parentId], references: [id])
+  children    Organization[] @relation("OrgHierarchy")
+  state       String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  officers    Officer[]
+
+  @@map("organizations")
+}
+
+model Officer {
+  id              String       @id @default(uuid())
+  badgeNumber     String       @unique
+  firstName       String
+  lastName        String
+  rank            String
+  email           String       @unique
+  passwordHash    String
+  role            OfficerRole
+  orgId           String
+  organization    Organization @relation(fields: [orgId], references: [id])
+  mfaEnabled      Boolean      @default(false)
+  mfaSecret       String?
+  isSuspended     Boolean      @default(false)
+  assignedDevices Device[]
+  auditLogs       AuditLog[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("officers")
+}
+
+model PersonMaster {
+  id              String              @id @default(uuid())
+  nin             String?             @unique
+  firstName       String
+  lastName        String
+  middleName      String?
+  aliases         String[]
+  dateOfBirth     DateTime
+  sex             String
+  nationality     String              @default("Nigerian")
+  photoUrl        String?
+  biometricRef    String?
+  classification  ClassificationLevel @default(LAW_ENFORCEMENT_RESTRICTED)
+  incidents       IncidentPerson[]
+  arrests         Arrest[]
+  warrants        Warrant[]
+  cases           CasePerson[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@map("persons")
+}
+
+model Incident {
+  id                 String              @id @default(uuid())
+  incidentNumber     String              @unique
+  title              String
+  description        String
+  incidentType       String
+  locationName       String
+  latitude           Float?
+  longitude          Float?
+  occurredAt         DateTime
+  reportingOfficerId String
+  status             String              @default("REPORTED")
+  classification     ClassificationLevel @default(LAW_ENFORCEMENT_RESTRICTED)
+  persons            IncidentPerson[]
+  evidence           Evidence[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@map("incidents")
+}
+
+model IncidentPerson {
+  id           String       @id @default(uuid())
+  incidentId   String
+  incident     Incident     @relation(fields: [incidentId], references: [id])
+  personId     String
+  person       PersonMaster @relation(fields: [personId], references: [id])
+  relationship String
+
+  @@map("incident_persons")
+}
+
+model Arrest {
+  id                 String       @id @default(uuid())
+  arrestNumber       String       @unique
+  personId           String
+  person             PersonMaster @relation(fields: [personId], references: [id])
+  incidentId         String?
+  arrestingOfficerId String
+  arrestedAt         DateTime
+  location           String
+  legalBasis         String
+  charges            String[]
+  legalStatus        LegalStatus  @default(ARREST)
+  bailStatus         String?
+  custodyLocation    String
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("arrests")
+}
+
+model Warrant {
+  id               String        @id @default(uuid())
+  warrantNumber    String        @unique
+  personId         String
+  person           PersonMaster  @relation(fields: [personId], references: [id])
+  issuingAuthority String
+  jurisdiction     String
+  issuedAt         DateTime
+  expiresAt        DateTime?
+  status           WarrantStatus @default(ACTIVE)
+  charges          String[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@map("warrants")
+}
+
+model Case {
+  id            String       @id @default(uuid())
+  caseNumber    String       @unique
+  title         String
+  summary       String
+  leadOfficerId String
+  status        String       @default("UNDER_INVESTIGATION")
+  persons       CasePerson[]
+  evidence      Evidence[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("cases")
+}
+
+model CasePerson {
+  id         String       @id @default(uuid())
+  caseId     String
+  case       Case         @relation(fields: [caseId], references: [id])
+  personId   String
+  person     PersonMaster @relation(fields: [personId], references: [id])
+  roleInCase String
+
+  @@map("case_persons")
+}
+
+model Evidence {
+  id             String           @id @default(uuid())
+  evidenceNumber String           @unique
+  caseId         String?
+  case           Case?            @relation(fields: [caseId], references: [id])
+  incidentId     String?
+  incident       Incident?        @relation(fields: [incidentId], references: [id])
+  fileType       String
+  fileSize       Int
+  storagePath    String
+  sha256Hash     String
+  retentionDate  DateTime?
+  chainEvents    ChainOfCustody[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@map("evidence")
+}
+
+model BodycamRecording {
+  id              String   @id @default(uuid())
+  deviceId        String
+  officerId       String
+  recordingStart  DateTime
+  recordingEnd    DateTime
+  storagePath     String
+  sha256Hash      String
+  durationSeconds Int
+  isSealed        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("bodycam_recordings")
+}
+
+model ChainOfCustody {
+  id          String   @id @default(uuid())
+  evidenceId  String
+  evidence    Evidence @relation(fields: [evidenceId], references: [id])
+  action      String
+  performedBy String
+  reason      String
+  timestamp   DateTime @default(now())
+
+  @@map("chain_of_custody")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  officerId String?
+  officer   Officer? @relation(fields: [officerId], references: [id])
+  action    String
+  resource  String
+  purpose   String?
+  ipAddress String
+  deviceId  String?
+  outcome   String
+  metadata  Json?
+  timestamp DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model Device {
+  id           String    @id @default(uuid())
+  serialNumber String    @unique
+  deviceType   String
+  officerId    String?
+  officer      Officer?  @relation(fields: [officerId], references: [id])
+  status       String    @default("ACTIVE")
+  lastSyncAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("devices")
+}
