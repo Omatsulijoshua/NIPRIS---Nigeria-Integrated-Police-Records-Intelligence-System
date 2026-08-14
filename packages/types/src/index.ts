@@ -25,6 +25,38 @@ export enum OfficerRole {
   READ_ONLY_VIEWER = "READ_ONLY_VIEWER"              // Level 14
 }
 
+export enum OfficerRank {
+  INSPECTOR_GENERAL = "Inspector General of Police (IGP)",
+  DEPUTY_INSPECTOR_GENERAL = "Deputy Inspector General of Police (DIG)",
+  ASSISTANT_INSPECTOR_GENERAL = "Assistant Inspector General of Police (AIG)",
+  COMMISSIONER = "Commissioner of Police (CP)",
+  DEPUTY_COMMISSIONER = "Deputy Commissioner of Police (DCP)",
+  ASSISTANT_COMMISSIONER = "Assistant Commissioner of Police (ACP)",
+  CHIEF_SUPERINTENDENT = "Chief Superintendent of Police (CSP)",
+  SUPERINTENDENT = "Superintendent of Police (SP)",
+  DEPUTY_SUPERINTENDENT = "Deputy Superintendent of Police (DSP)",
+  ASSISTANT_SUPERINTENDENT = "Assistant Superintendent of Police (ASP)",
+  INSPECTOR = "Inspector of Police",
+  SERGEANT = "Sergeant",
+  CORPORAL = "Corporal",
+  CONSTABLE = "Constable"
+}
+
+export enum EmploymentStatus {
+  ACTIVE = "ACTIVE",
+  SUSPENDED = "SUSPENDED",
+  TRANSFERRED = "TRANSFERRED",
+  TERMINATED = "TERMINATED"
+}
+
+export const NIGERIAN_STATES = [
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno",
+  "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo",
+  "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos",
+  "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
+  "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
+];
+
 export enum LegalStatus {
   ARREST = "ARREST",
   CHARGE = "CHARGE",
@@ -69,6 +101,31 @@ export interface UserSessionPayload {
   state?: string;
   mfaVerified: boolean;
   sessionId: string;
+}
+
+export interface OrganizationNode {
+  id: string;
+  code: string;
+  name: string;
+  level: OrgLevel;
+  parentId?: string;
+  state?: string;
+  createdAt: string;
+}
+
+export interface OfficerProfile {
+  id: string;
+  badgeNumber: string;
+  firstName: string;
+  lastName: string;
+  rank: OfficerRank;
+  email: string;
+  role: OfficerRole;
+  orgId: string;
+  state?: string;
+  department?: string;
+  status: EmploymentStatus;
+  createdAt: string;
 }
 
 export interface ApiResponse<T = any> {
