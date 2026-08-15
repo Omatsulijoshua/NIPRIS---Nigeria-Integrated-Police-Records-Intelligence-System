@@ -164,6 +164,33 @@ export enum RedactionStatus {
   MASKING_PREVIEW = "MASKING_PREVIEW"
 }
 
+export enum AuditActionType {
+  VIEW_RECORD = "VIEW_RECORD",
+  SEARCH = "SEARCH",
+  CREATE = "CREATE",
+  UPDATE = "UPDATE",
+  DELETE = "DELETE",
+  EXPORT = "EXPORT",
+  EMERGENCY_OVERRIDE = "EMERGENCY_OVERRIDE",
+  BIOMETRIC_MATCH = "BIOMETRIC_MATCH"
+}
+
+export enum AuditResourceType {
+  PERSON = "PERSON",
+  ARREST = "ARREST",
+  CASE = "CASE",
+  WARRANT = "WARRANT",
+  EVIDENCE = "EVIDENCE",
+  BODYCAM = "BODYCAM",
+  INTELLIGENCE = "INTELLIGENCE",
+  SYSTEM = "SYSTEM"
+}
+
+export enum AuditTamperStatus {
+  VERIFIED_INTACT = "VERIFIED_INTACT",
+  TAMPER_SUSPECT = "TAMPER_SUSPECT"
+}
+
 export enum InterStateRequestPriority {
   ROUTINE = "ROUTINE",
   URGENT = "URGENT",
@@ -319,6 +346,37 @@ export interface IdentityResolutionResult {
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  sequenceIndex: number;
+  timestamp: string;
+  officerId: string;
+  badgeNumber: string;
+  officerRole: OfficerRole;
+  ipAddress: string;
+  deviceFingerprint: string;
+  action: AuditActionType;
+  resourceType: AuditResourceType;
+  targetResourceId: string;
+  justificationRationale: string;
+  jurisdictionCode: string;
+  complianceRiskScore: number; // 0-100
+  previousBlockHash: string;
+  blockHash: string; // SHA-256 Block Hash
+  tamperStatus: AuditTamperStatus;
+  internalAffairsFlagged: boolean;
+  createdAt: string;
+}
+
+export interface ComplianceSummaryReport {
+  totalAuditLogs: number;
+  chainIntegrityStatus: AuditTamperStatus;
+  highRiskQueriesCount: number;
+  internalAffairsEscalationsCount: number;
+  unjustifiedQueriesCount: number;
+  averageRiskScore: number;
 }
 
 export interface ConfidentialInformantRecord {

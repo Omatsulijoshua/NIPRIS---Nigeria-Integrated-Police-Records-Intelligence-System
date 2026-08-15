@@ -12,9 +12,24 @@ import { EvidenceModule } from './evidence/evidence.module';
 import { BodycamModule } from './bodycam/bodycam.module';
 import { InterStateModule } from './inter-state/inter-state.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
-  imports: [AuthModule, OrganizationsModule, OfficersModule, PersonsModule, IncidentsModule, ArrestsModule, CasesModule, WarrantsModule, EvidenceModule, BodycamModule, InterStateModule, IntelligenceModule],
+  imports: [
+    AuthModule,
+    OrganizationsModule,
+    OfficersModule,
+    PersonsModule,
+    IncidentsModule,
+    ArrestsModule,
+    CasesModule,
+    WarrantsModule,
+    EvidenceModule,
+    BodycamModule,
+    InterStateModule,
+    IntelligenceModule,
+    AuditModule,
+  ],
   controllers: [HealthController],
   providers: [],
 })
