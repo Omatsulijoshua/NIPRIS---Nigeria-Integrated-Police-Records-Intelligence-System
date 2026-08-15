@@ -453,6 +453,40 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface FieldEncryptionResult {
+  algorithm: "AES-256-GCM";
+  encryptedCiphertext: string;
+  initializationVectorIv: string;
+  authTag: string;
+  keyVersion: string;
+}
+
+export interface ZeroTrustEvalResult {
+  accessGranted: boolean;
+  officerId: string;
+  mfaVerified: boolean;
+  jurisdictionAuthorized: boolean;
+  rationaleValid: boolean;
+  denialReason?: string;
+  evaluatedAt: string;
+}
+
+export interface VulnerabilityScanTestResult {
+  testName: string;
+  category: "SQL_INJECTION" | "XSS" | "PATH_TRAVERSAL" | "PRIVILEGE_ESCALATION";
+  payloadTested: string;
+  prevented: boolean;
+  mitigationStrategy: string;
+}
+
+export interface VulnerabilityScanReport {
+  totalScans: number;
+  vulnerabilitiesFoundCount: number;
+  overallSecurityRating: "A+" | "A" | "B" | "F";
+  tests: VulnerabilityScanTestResult[];
+  scannedAt: string;
+}
+
 export interface SystemHealthReport {
   status: SystemHealthStatus;
   version: string;

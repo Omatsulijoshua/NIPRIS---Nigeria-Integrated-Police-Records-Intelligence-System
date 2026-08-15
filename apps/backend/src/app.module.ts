@@ -19,6 +19,7 @@ import { CustodyModule } from './custody/custody.module';
 import { InterAgencyModule } from './inter-agency/inter-agency.module';
 import { PublicServicesModule } from './public-services/public-services.module';
 import { CadModule } from './cad/cad.module';
+import { SecurityModule } from './security/security.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { CadModule } from './cad/cad.module';
     InterAgencyModule,
     PublicServicesModule,
     CadModule,
+    SecurityModule,
   ],
   controllers: [HealthController],
   providers: [],
