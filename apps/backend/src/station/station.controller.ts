@@ -1,12 +1,14 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { StationService } from './station.service';
 import { CreateStationProfileDto } from './dto/create-station-profile.dto';
 import { CreateStationUnitDto } from './dto/create-station-unit.dto';
 import { AssignStationOfficerDto } from './dto/assign-station-officer.dto';
+import { CreateDiaryEntryDto } from './dto/create-diary-entry.dto';
+import { SearchDiaryEntriesDto } from './dto/search-diary-entries.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization & Command Subsystem')
+@ApiTags('NIPRIS Station Organization, Command & Station Diary Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -114,6 +116,53 @@ export class StationController {
       success: true,
       count: alerts.length,
       data: alerts,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('diary')
+  @ApiOperation({ summary: 'Create Immutable Digital Station Diary Entry' })
+  async createDiaryEntry(@Body() dto: CreateDiaryEntryDto) {
+    const entry = await this.stationService.createDiaryEntry(dto);
+    return {
+      success: true,
+      message: `Immutable Station Diary Entry ${entry.entryNumber} logged cleanly.`,
+      data: entry,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('diary/:stationId')
+  @ApiOperation({ summary: 'List Digital Station Diary Entries for Station' })
+  async getDiaryEntries(@Param('stationId') stationId: string) {
+    const entries = await this.stationService.getDiaryEntries(stationId);
+    return {
+      success: true,
+      count: entries.length,
+      data: entries,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('diary/search/:stationId')
+  @ApiOperation({ summary: 'Search Digital Station Diary Entries with Event & Keyword Filters' })
+  async searchDiaryEntries(@Param('stationId') stationId: string, @Body() dto: SearchDiaryEntriesDto) {
+    const results = await this.stationService.searchDiaryEntries(stationId, dto);
+    return {
+      success: true,
+      count: results.length,
+      data: results,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('diary/entry/:id/timeline')
+  @ApiOperation({ summary: 'Get Audit History & Version Timeline for Station Diary Entry' })
+  async getDiaryEntryTimeline(@Param('id') id: string) {
+    const timeline = await this.stationService.getDiaryEntryTimeline(id);
+    return {
+      success: true,
+      data: timeline,
       timestamp: new Date().toISOString(),
     };
   }

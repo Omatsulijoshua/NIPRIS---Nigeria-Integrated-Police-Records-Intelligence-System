@@ -2,6 +2,8 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateStationProfileDto } from './dto/create-station-profile.dto';
 import { CreateStationUnitDto } from './dto/create-station-unit.dto';
 import { AssignStationOfficerDto } from './dto/assign-station-officer.dto';
+import { CreateDiaryEntryDto } from './dto/create-diary-entry.dto';
+import { SearchDiaryEntriesDto } from './dto/search-diary-entries.dto';
 import { OfficerRole, OrgLevel } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -76,12 +78,35 @@ export interface StationAlertItem {
   timestamp: string;
 }
 
+export interface StationDiaryRecord {
+  id: string;
+  entryNumber: string; // e.g. SDE-2026-STN001-00912
+  stationId: string;
+  recordedAt: string;
+  officerId: string;
+  officerName: string;
+  officerBadge: string;
+  eventType: string;
+  description: string;
+  incidentId?: string;
+  caseId?: string;
+  personId?: string;
+  vehicleId?: string;
+  evidenceId?: string;
+  attachments: string[];
+  isImmutable: true;
+  versionIndex: number;
+  auditHistory: Array<{ timestamp: string; action: string; performedBy: string }>;
+  createdAt: string;
+}
+
 @Injectable()
 export class StationService {
   private readonly logger = new Logger(StationService.name);
   private readonly profilesStore = new Map<string, StationProfileRecord>();
   private readonly unitsStore = new Map<string, StationUnitRecord[]>();
   private readonly officerAssignmentsStore = new Map<string, StationOfficerAssignment[]>();
+  private readonly diaryStore = new Map<string, StationDiaryRecord[]>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -126,6 +151,45 @@ export class StationService {
       { officerId: 'off_patrol_001', officerName: 'Sgt Monday Usifo', badgeNumber: 'NPF-66120', rank: 'Sergeant', stationId, unitId: 'unt_patrol_01', unitName: 'General Patrol & Response Unit', role: OfficerRole.PATROL_OFFICER, assignedAt: new Date().toISOString() },
     ];
     this.officerAssignmentsStore.set(stationId, officers);
+
+    // Seed Diary Entries
+    const diaryEntries: StationDiaryRecord[] = [
+      {
+        id: 'sde_001',
+        entryNumber: 'SDE-2026-STN001-00912',
+        stationId,
+        recordedAt: new Date(Date.now() - 30 * 60000).toISOString(),
+        officerId: 'off_desk_001',
+        officerName: 'Insp Grace Enagbare',
+        officerBadge: 'NPF-94102',
+        eventType: 'COMPLAINT_RECEIVED',
+        description: 'Walk-in citizen Chief Emeka Nnamdi reported armed robbery incident at Ring Road.',
+        incidentId: 'INC-2026-EDO-00912',
+        attachments: [],
+        isImmutable: true,
+        versionIndex: 1,
+        auditHistory: [{ timestamp: new Date(Date.now() - 30 * 60000).toISOString(), action: 'ENTRY_CREATED', performedBy: 'Insp Grace Enagbare (NPF-94102)' }],
+        createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
+      },
+      {
+        id: 'sde_002',
+        entryNumber: 'SDE-2026-STN001-00913',
+        stationId,
+        recordedAt: new Date(Date.now() - 15 * 60000).toISOString(),
+        officerId: 'off_patrol_001',
+        officerName: 'Sgt Monday Usifo',
+        officerBadge: 'NPF-66120',
+        eventType: 'PATROL_DEPARTURE',
+        description: 'Patrol Team Alpha departed station for routine patrol along Benin-Sapele expressway.',
+        vehicleId: 'veh_patrol_01',
+        attachments: [],
+        isImmutable: true,
+        versionIndex: 1,
+        auditHistory: [{ timestamp: new Date(Date.now() - 15 * 60000).toISOString(), action: 'ENTRY_CREATED', performedBy: 'Sgt Monday Usifo (NPF-66120)' }],
+        createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
+      },
+    ];
+    this.diaryStore.set(stationId, diaryEntries);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -258,5 +322,76 @@ export class StationService {
       { id: 'alt_002', severity: 'CRITICAL', category: 'WARRANT_ALERT', title: 'High-Risk Wanted Person Match', description: 'Facial recognition candidate match flagged for Wanted Circular WAR-2026-EDO-00912.', timestamp: new Date().toISOString() },
       { id: 'alt_003', severity: 'WARNING', category: 'BODYCAM_COMPLIANCE', title: 'Bodycam Upload Pending', description: 'Device BWC-NPF-EDO-004 has 2 un-uploaded shift recordings.', timestamp: new Date().toISOString() },
     ];
+  }
+
+  // --- DIGITAL STATION DIARY SUBSYSTEM ---
+
+  async createDiaryEntry(dto: CreateDiaryEntryDto): Promise<StationDiaryRecord> {
+    const entryNumber = `SDE-2026-STN001-${Math.floor(10000 + Math.random() * 90000)}`;
+    const now = new Date().toISOString();
+
+    const record: StationDiaryRecord = {
+      id: `sde_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      entryNumber,
+      stationId: dto.stationId,
+      recordedAt: now,
+      officerId: dto.officerId,
+      officerName: 'Insp Grace Enagbare',
+      officerBadge: 'NPF-94102',
+      eventType: dto.eventType,
+      description: dto.description,
+      incidentId: dto.incidentId,
+      caseId: dto.caseId,
+      personId: dto.personId,
+      vehicleId: dto.vehicleId,
+      evidenceId: dto.evidenceId,
+      attachments: dto.attachments || [],
+      isImmutable: true,
+      versionIndex: 1,
+      auditHistory: [{ timestamp: now, action: 'ENTRY_CREATED_IMMUTABLE', performedBy: `Officer ${dto.officerId}` }],
+      createdAt: now,
+    };
+
+    const existing = this.diaryStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.diaryStore.set(dto.stationId, existing);
+
+    this.logger.log(`Created Immutable Digital Station Diary Entry ${entryNumber} (Event: ${dto.eventType})`);
+    return record;
+  }
+
+  async getDiaryEntries(stationId: string): Promise<StationDiaryRecord[]> {
+    return this.diaryStore.get(stationId) || [];
+  }
+
+  async searchDiaryEntries(stationId: string, dto: SearchDiaryEntriesDto): Promise<StationDiaryRecord[]> {
+    const all = this.diaryStore.get(stationId) || [];
+    return all.filter((entry) => {
+      if (dto.eventType && entry.eventType !== dto.eventType) return false;
+      if (dto.officerId && entry.officerId !== dto.officerId) return false;
+      if (dto.searchQuery) {
+        const query = dto.searchQuery.toLowerCase();
+        const matchNumber = entry.entryNumber.toLowerCase().includes(query);
+        const matchDesc = entry.description.toLowerCase().includes(query);
+        return matchNumber || matchDesc;
+      }
+      return true;
+    });
+  }
+
+  async getDiaryEntryTimeline(entryId: string) {
+    for (const [, entries] of this.diaryStore.entries()) {
+      const match = entries.find((e) => e.id === entryId || e.entryNumber === entryId);
+      if (match) {
+        return {
+          entryId: match.id,
+          entryNumber: match.entryNumber,
+          isImmutable: match.isImmutable,
+          versionIndex: match.versionIndex,
+          auditHistory: match.auditHistory,
+        };
+      }
+    }
+    throw new NotFoundException(`Station Diary Entry ${entryId} not found`);
   }
 }
