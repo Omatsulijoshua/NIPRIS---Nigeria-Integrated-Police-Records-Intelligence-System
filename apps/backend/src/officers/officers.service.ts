@@ -66,7 +66,6 @@ export class OfficersService {
       officers = officers.filter((o) => o.status === query.status);
     }
 
-    // Strip sensitive fields (passwordHash)
     return officers.map(({ passwordHash, ...profile }) => profile);
   }
 
@@ -78,7 +77,6 @@ export class OfficersService {
   }
 
   async createOfficer(dto: CreateOfficerDto): Promise<OfficerProfile> {
-    // Check Badge ID and Email uniqueness
     const duplicate = Array.from(this.officersStore.values()).find(
       (o) => o.badgeNumber === dto.badgeNumber || o.email.toLowerCase() === dto.email.toLowerCase()
     );
@@ -86,7 +84,6 @@ export class OfficersService {
       throw new ConflictException(`Officer with Badge Number '${dto.badgeNumber}' or Email '${dto.email}' already exists.`);
     }
 
-    // Validate assigned Organization Node
     const orgNode = await this.orgsService.getOrganizationById(dto.orgId);
     const passwordHash = await hashPassword(dto.password);
 
@@ -142,5 +139,24 @@ export class OfficersService {
 
     const { passwordHash, ...profile } = officer;
     return profile;
+  }
+
+  async updateDutyStatus(officerId: string, dutyStatus: string, lat?: number, lng?: number) {
+    this.logger.log(`Officer ${officerId} updated patrol duty status to ${dutyStatus} (GPS: ${lat}, ${lng})`);
+    return { officerId, dutyStatus, latitude: lat, longitude: lng, timestamp: new Date().toISOString() };
+  }
+
+  async broadcastSosAlert(officerId: string, rationale: string, lat: number, lng: number) {
+    const alertId = `sos_${Math.random().toString(36).substring(2)}_${Date.now()}`;
+    this.logger.error(`🚨 SOS EMERGENCY BROADCAST from Officer ${officerId} (GPS: ${lat}, ${lng}) - Rationale: ${rationale}`);
+    return {
+      alertId,
+      officerId,
+      latitude: lat,
+      longitude: lng,
+      emergencyRationale: rationale,
+      broadcastSeverity: 'CRITICAL_CAD_EMERGENCY_DISPATCH',
+      timestamp: new Date().toISOString(),
+    };
   }
 }

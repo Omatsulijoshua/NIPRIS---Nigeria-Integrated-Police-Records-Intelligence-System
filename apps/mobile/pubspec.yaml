@@ -1,0 +1,22 @@
+name: nipris_mobile
+description: "NIPRIS Nigeria Police Field Mobile Application - Offline-first, identity lookup, incident reporting, and SOS panic alert broadcast"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.0.5
+  http: ^1.1.0
+  intl: ^0.18.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true

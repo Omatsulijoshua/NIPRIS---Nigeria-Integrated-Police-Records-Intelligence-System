@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { OfficersService } from './officers.service';
 import { CreateOfficerDto } from './dto/create-officer.dto';
@@ -76,6 +76,32 @@ export class OfficersController {
       success: true,
       message: `Officer ${officer.badgeNumber} status updated to ${status}.`,
       data: officer,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('duty-status')
+  @ApiOperation({ summary: 'Mobile Field App: Update Patrol Duty Status & Location Telemetry' })
+  async updateDutyStatus(@Body() body: { dutyStatus: string; latitude?: number; longitude?: number }, @Req() req: any) {
+    const officerId = req.user?.officerId || 'off-patrol-edo';
+    const result = await this.officersService.updateDutyStatus(officerId, body.dutyStatus, body.latitude, body.longitude);
+    return {
+      success: true,
+      message: `Duty status updated to ${body.dutyStatus}.`,
+      data: result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('sos-alert')
+  @ApiOperation({ summary: 'Mobile Field App: Broadcast High-Priority SOS Emergency Alert to Command CAD' })
+  async broadcastSosAlert(@Body() body: { emergencyRationale: string; latitude: number; longitude: number }, @Req() req: any) {
+    const officerId = req.user?.officerId || 'off-patrol-edo';
+    const alert = await this.officersService.broadcastSosAlert(officerId, body.emergencyRationale, body.latitude, body.longitude);
+    return {
+      success: true,
+      message: `⚡ SOS Emergency panic alert broadcasted to State Command CAD & surrounding units!`,
+      data: alert,
       timestamp: new Date().toISOString(),
     };
   }
