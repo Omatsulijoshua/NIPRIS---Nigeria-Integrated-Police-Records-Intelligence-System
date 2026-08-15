@@ -12,9 +12,12 @@ import { ConvertComplaintToIncidentDto } from './dto/convert-complaint-to-incide
 import { CreateDutyShiftDto } from './dto/create-duty-shift.dto';
 import { ClockInAttendanceDto } from './dto/clock-in-attendance.dto';
 import { UpdateOfficerStatusDto } from './dto/update-officer-status.dto';
+import { CreateCustodyIntakeDto } from './dto/create-custody-intake.dto';
+import { IntakePersonPropertyDto } from './dto/intake-person-property.dto';
+import { LogCustodyEventDto } from './dto/log-custody-event.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty & Attendance Subsystem')
+@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance & Custody Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -126,86 +129,84 @@ export class StationController {
     };
   }
 
-  @Post('duty/shifts')
-  @ApiOperation({ summary: 'Define New Station Duty Shift Schedule' })
-  async createDutyShift(@Body() dto: CreateDutyShiftDto) {
-    const shift = await this.stationService.createDutyShift(dto);
+  @Post('custody/intake')
+  @ApiOperation({ summary: 'Process Local Station Detainee Custody Intake' })
+  async createCustodyIntake(@Body() dto: CreateCustodyIntakeDto) {
+    const custody = await this.stationService.createCustodyIntake(dto);
     return {
       success: true,
-      message: `Shift ${shift.shiftName} created.`,
-      data: shift,
+      message: `Local Custody Record ${custody.custodyNumber} created cleanly.`,
+      data: custody,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('duty/shifts/:stationId')
-  @ApiOperation({ summary: 'List Station Duty Shift Schedules' })
-  async getDutyShifts(@Param('stationId') stationId: string) {
-    const shifts = await this.stationService.getDutyShifts(stationId);
+  @Get('custody/:stationId')
+  @ApiOperation({ summary: 'List Local Station Detainees' })
+  async getStationCustodyList(@Param('stationId') stationId: string) {
+    const list = await this.stationService.getStationCustodyList(stationId);
     return {
       success: true,
-      count: shifts.length,
-      data: shifts,
+      count: list.length,
+      data: list,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('duty/roster/:stationId')
-  @ApiOperation({ summary: 'Get Station Officer Duty Roster' })
-  async getDutyRoster(@Param('stationId') stationId: string) {
-    const roster = await this.stationService.getDutyRoster(stationId);
+  @Post('custody/property')
+  @ApiOperation({ summary: 'Process Detainee Personal Property Voucher Intake' })
+  async intakePersonProperty(@Body() dto: IntakePersonPropertyDto) {
+    const voucher = await this.stationService.intakePersonProperty(dto);
     return {
       success: true,
-      count: roster.length,
-      data: roster,
+      message: `Property Voucher ${voucher.voucherNumber} logged cleanly.`,
+      data: voucher,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('attendance/clock-in')
-  @ApiOperation({ summary: 'Clock-In Officer Shift Attendance' })
-  async clockInOfficer(@Body() dto: ClockInAttendanceDto) {
-    const log = await this.stationService.clockInOfficer(dto);
+  @Get('custody/property/:custodyId')
+  @ApiOperation({ summary: 'Get Property Voucher Items for Custody Record' })
+  async getCustodyProperty(@Param('custodyId') custodyId: string) {
+    const property = await this.stationService.getCustodyProperty(custodyId);
     return {
       success: true,
-      message: `Officer ${dto.officerId} Clocked IN cleanly.`,
-      data: log,
+      data: property,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('attendance/clock-out')
-  @ApiOperation({ summary: 'Clock-Out Officer Shift Attendance' })
-  async clockOutOfficer(@Body('officerId') officerId: string, @Body('stationId') stationId: string) {
-    const log = await this.stationService.clockOutOfficer(officerId, stationId);
+  @Post('custody/event')
+  @ApiOperation({ summary: 'Log Timestamped Custody Event (Meal, Medical, Lawyer Visit, Interrogation)' })
+  async logCustodyEvent(@Body() dto: LogCustodyEventDto) {
+    const event = await this.stationService.logCustodyEvent(dto);
     return {
       success: true,
-      message: `Officer ${officerId} Clocked OUT cleanly.`,
-      data: log,
+      message: `Custody Event ${dto.eventType} logged cleanly.`,
+      data: event,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('attendance/logs/:stationId')
-  @ApiOperation({ summary: 'List Officer Attendance Logs for Station' })
-  async getAttendanceLogs(@Param('stationId') stationId: string) {
-    const logs = await this.stationService.getAttendanceLogs(stationId);
+  @Get('custody/events/:custodyId')
+  @ApiOperation({ summary: 'List Custody Event History for Detainee' })
+  async getCustodyEvents(@Param('custodyId') custodyId: string) {
+    const events = await this.stationService.getCustodyEvents(custodyId);
     return {
       success: true,
-      count: logs.length,
-      data: logs,
+      count: events.length,
+      data: events,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('officers/status')
-  @ApiOperation({ summary: 'Update Officer Operational Duty Status' })
-  async updateOfficerStatus(@Body() dto: UpdateOfficerStatusDto) {
-    const result = await this.stationService.updateOfficerOperationalStatus(dto);
+  @Get('custody/cell-status/:stationId')
+  @ApiOperation({ summary: 'Get Holding Cell Occupancy Status & Overcrowding Metrics' })
+  async getCellOccupancyStatus(@Param('stationId') stationId: string) {
+    const status = await this.stationService.getCellOccupancyStatus(stationId);
     return {
       success: true,
-      message: `Officer ${dto.officerId} status updated to ${dto.operationalStatus}.`,
-      data: result,
+      data: status,
       timestamp: new Date().toISOString(),
     };
   }
