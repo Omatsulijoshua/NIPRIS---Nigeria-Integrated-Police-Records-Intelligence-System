@@ -13,6 +13,10 @@ import { UpdateOfficerStatusDto } from './dto/update-officer-status.dto';
 import { CreateCustodyIntakeDto } from './dto/create-custody-intake.dto';
 import { IntakePersonPropertyDto } from './dto/intake-person-property.dto';
 import { LogCustodyEventDto } from './dto/log-custody-event.dto';
+import { AssignStationCaseDto } from './dto/assign-station-case.dto';
+import { UpdateCaseChecklistDto } from './dto/update-case-checklist.dto';
+import { CompileProsecutionSheetDto } from './dto/compile-prosecution-sheet.dto';
+import { TransferStationCaseDto } from './dto/transfer-station-case.dto';
 import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -205,6 +209,26 @@ export interface CustodyEventRecord {
   details: string;
 }
 
+export interface StationCaseAssignmentRecord {
+  caseId: string;
+  caseNumber: string;
+  leadOfficerId: string;
+  leadOfficerName: string;
+  teamOfficerIds: string[];
+  supervisorOfficerId?: string;
+  assignedAt: string;
+  checklist: Record<string, boolean>;
+  prosecutionSheet?: {
+    charges: string[];
+    summary: string;
+    witnesses: string[];
+    recommendation: string;
+    endorsedByCommander: boolean;
+    endorsedAt?: string;
+  };
+  transferHistory: Array<{ targetOrgId: string; targetLevel: string; reason: string; approvedBy: string; timestamp: string }>;
+}
+
 @Injectable()
 export class StationService {
   private readonly logger = new Logger(StationService.name);
@@ -220,6 +244,7 @@ export class StationService {
   private readonly custodyStore = new Map<string, LocalCustodyRecord[]>();
   private readonly propertyVoucherStore = new Map<string, PersonPropertyVoucherRecord>();
   private readonly custodyEventsStore = new Map<string, CustodyEventRecord[]>();
+  private readonly caseAssignmentsStore = new Map<string, StationCaseAssignmentRecord>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -247,29 +272,28 @@ export class StationService {
     };
     this.profilesStore.set(stationId, profile);
 
-    // Seed Custody Record
-    const custodyRecords: LocalCustodyRecord[] = [
-      {
-        id: 'lcd_001',
-        custodyNumber: 'LCD-2026-STN001-00912',
-        stationId,
-        personId: 'per_edo_suspect_01',
-        personName: 'Osagie Efe',
-        arrestId: 'ARR-2026-EDO-00912',
-        cellId: 'CELL-02',
-        intakeOfficerId: 'off_desk_001',
-        intakeTimestamp: new Date(Date.now() - 10 * 3600000).toISOString(),
-        reasonForDetention: 'Suspected armed robbery suspect booked under section 312 PC.',
-        medicalNote: 'No physical injuries.',
-        riskRating: 'HIGH',
-        custodyStatus: 'DETAINED',
-        detentionDeadlineTimestamp: new Date(Date.now() + 14 * 3600000).toISOString(),
-        remandAlertTriggered: false,
-        propertyVoucherId: 'PROP-2026-STN001-00912',
-        createdAt: new Date(Date.now() - 10 * 3600000).toISOString(),
+    // Seed Case Assignment
+    const caseAssignment: StationCaseAssignmentRecord = {
+      caseId: 'cas_edo_001',
+      caseNumber: 'CAS-2026-EDO-00912',
+      leadOfficerId: 'off_cid_001',
+      leadOfficerName: 'DSP Chidi Okonkwo',
+      teamOfficerIds: ['off_patrol_001'],
+      supervisorOfficerId: 'off_commander_edo',
+      assignedAt: new Date().toISOString(),
+      checklist: {
+        CRIME_SCENE_VISITED: true,
+        WITNESSES_INTERVIEWED: true,
+        SUSPECT_INTERVIEWED: true,
+        EVIDENCE_COLLECTED: true,
+        FORENSICS_REQUESTED: false,
+        LEGAL_REVIEW_DONE: false,
+        PROSECUTION_FILE_COMPILED: false,
+        COURT_DATE_SET: false,
       },
-    ];
-    this.custodyStore.set(stationId, custodyRecords);
+      transferHistory: [],
+    };
+    this.caseAssignmentsStore.set('cas_edo_001', caseAssignment);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -783,5 +807,100 @@ export class StationService {
         { cellId: 'CELL-04', capacity: 5, occupied: 2 },
       ],
     };
+  }
+
+  // --- STATION CASE OPERATIONS & WORKLOAD SUBSYSTEM ---
+
+  async assignStationCase(dto: AssignStationCaseDto): Promise<StationCaseAssignmentRecord> {
+    const existing = this.caseAssignmentsStore.get(dto.caseId);
+    const record: StationCaseAssignmentRecord = {
+      caseId: dto.caseId,
+      caseNumber: existing?.caseNumber || `CAS-2026-EDO-${Math.floor(10000 + Math.random() * 90000)}`,
+      leadOfficerId: dto.leadOfficerId,
+      leadOfficerName: 'DSP Chidi Okonkwo',
+      teamOfficerIds: dto.teamOfficerIds || [],
+      supervisorOfficerId: dto.supervisorOfficerId,
+      assignedAt: new Date().toISOString(),
+      checklist: existing?.checklist || {
+        CRIME_SCENE_VISITED: false,
+        WITNESSES_INTERVIEWED: false,
+        SUSPECT_INTERVIEWED: false,
+        EVIDENCE_COLLECTED: false,
+        FORENSICS_REQUESTED: false,
+        LEGAL_REVIEW_DONE: false,
+        PROSECUTION_FILE_COMPILED: false,
+        COURT_DATE_SET: false,
+      },
+      prosecutionSheet: existing?.prosecutionSheet,
+      transferHistory: existing?.transferHistory || [],
+    };
+
+    this.caseAssignmentsStore.set(dto.caseId, record);
+    this.logger.log(`Assigned Case ${record.caseNumber} to Lead Officer ${dto.leadOfficerId}`);
+    return record;
+  }
+
+  async getOfficerWorkload(officerId: string) {
+    const assignedCases: StationCaseAssignmentRecord[] = [];
+    for (const [, caseRecord] of this.caseAssignmentsStore.entries()) {
+      if (caseRecord.leadOfficerId === officerId || caseRecord.teamOfficerIds.includes(officerId)) {
+        assignedCases.push(caseRecord);
+      }
+    }
+
+    return {
+      officerId,
+      officerName: 'DSP Chidi Okonkwo',
+      badgeNumber: 'NPF-77319',
+      activeCasesCount: assignedCases.length || 3,
+      pendingTasksCount: 4,
+      overdueActionsCount: 1,
+      investigationAverageDays: 5.2,
+      assignedCases,
+    };
+  }
+
+  async updateCaseChecklist(dto: UpdateCaseChecklistDto): Promise<StationCaseAssignmentRecord> {
+    const caseRecord = this.caseAssignmentsStore.get(dto.caseId);
+    if (caseRecord) {
+      caseRecord.checklist[dto.itemKey] = dto.isCompleted;
+      this.logger.log(`Updated Checklist ${dto.itemKey}=${dto.isCompleted} for Case ${caseRecord.caseNumber}`);
+      return caseRecord;
+    }
+    throw new NotFoundException(`Case Assignment Record ${dto.caseId} not found`);
+  }
+
+  async compileProsecutionSheet(dto: CompileProsecutionSheetDto): Promise<StationCaseAssignmentRecord> {
+    const caseRecord = this.caseAssignmentsStore.get(dto.caseId);
+    if (caseRecord) {
+      caseRecord.prosecutionSheet = {
+        charges: dto.offenceCharges,
+        summary: dto.summaryOfEvidence,
+        witnesses: dto.witnesses,
+        recommendation: dto.ioRecommendation,
+        endorsedByCommander: true,
+        endorsedAt: new Date().toISOString(),
+      };
+      caseRecord.checklist['PROSECUTION_FILE_COMPILED'] = true;
+      this.logger.log(`Compiled & Endorsed Police Prosecution Sheet for Case ${caseRecord.caseNumber}`);
+      return caseRecord;
+    }
+    throw new NotFoundException(`Case Assignment Record ${dto.caseId} not found`);
+  }
+
+  async transferStationCase(dto: TransferStationCaseDto): Promise<StationCaseAssignmentRecord> {
+    const caseRecord = this.caseAssignmentsStore.get(dto.caseId);
+    if (caseRecord) {
+      caseRecord.transferHistory.unshift({
+        targetOrgId: dto.targetOrganizationId,
+        targetLevel: dto.targetLevel,
+        reason: dto.transferReason,
+        approvedBy: dto.approvingOfficerId,
+        timestamp: new Date().toISOString(),
+      });
+      this.logger.log(`Transferred Case ${caseRecord.caseNumber} to ${dto.targetLevel} (${dto.targetOrganizationId})`);
+      return caseRecord;
+    }
+    throw new NotFoundException(`Case Assignment Record ${dto.caseId} not found`);
   }
 }
