@@ -139,6 +139,31 @@ export enum EvidenceHashVerificationStatus {
   TAMPER_ALERT = "TAMPER_ALERT"
 }
 
+export enum DeviceType {
+  BODY_WORN_CAMERA = "BODY_WORN_CAMERA",
+  DASHCAM = "DASHCAM"
+}
+
+export enum DeviceStatus {
+  UNASSIGNED = "UNASSIGNED",
+  ASSIGNED = "ASSIGNED",
+  IN_SERVICE = "IN_SERVICE",
+  MAINTENANCE = "MAINTENANCE",
+  DECOMMISSIONED = "DECOMMISSIONED"
+}
+
+export enum RetentionPolicy {
+  AUTOMATIC_PURGE_90_DAYS = "AUTOMATIC_PURGE_90_DAYS",
+  INVESTIGATIVE_HOLD_1_YEAR = "INVESTIGATIVE_HOLD_1_YEAR",
+  EVIDENTIARY_HOLD_PERMANENT = "EVIDENTIARY_HOLD_PERMANENT"
+}
+
+export enum RedactionStatus {
+  UNREDACTED = "UNREDACTED",
+  REDACTION_APPLIED = "REDACTION_APPLIED",
+  MASKING_PREVIEW = "MASKING_PREVIEW"
+}
+
 export enum WantedRiskLevel {
   EXTREMELY_DANGEROUS = "EXTREMELY_DANGEROUS",
   ARMED_AND_DANGEROUS = "ARMED_AND_DANGEROUS",
@@ -245,6 +270,59 @@ export interface IdentityResolutionResult {
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface CameraDevice {
+  id: string;
+  deviceSerial: string;
+  model: string;
+  deviceType: DeviceType;
+  orgId: string;
+  assignedOfficerId?: string;
+  status: DeviceStatus;
+  batteryPercentage: number;
+  availableStorageBytes: number;
+  lastSyncTimestamp: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TelemetryPoint {
+  latitude: number;
+  longitude: number;
+  speedKmH: number;
+  timestamp: string;
+  dutyStatus: string;
+}
+
+export interface TimeSyncMarker {
+  id: string;
+  timestampSeconds: number;
+  tag: "FORCE_USED" | "WEAPON_DRAWN" | "TRAFFIC_STOP" | "ARREST_MADE" | "OFFICER_ASSISTANCE";
+  notes?: string;
+}
+
+export interface BodycamRecordingRecord {
+  id: string;
+  recordingNumber: string;
+  deviceSerial: string;
+  officerId: string;
+  officerName?: string;
+  incidentId?: string;
+  caseId?: string;
+  startTimestamp: string;
+  endTimestamp: string;
+  durationSeconds: number;
+  fileSizeBytes: number;
+  streamUrl: string;
+  sha256Hash: string;
+  telemetryTrack: TelemetryPoint[];
+  markerTags: TimeSyncMarker[];
+  retentionPolicy: RetentionPolicy;
+  redactionStatus: RedactionStatus;
+  classification: ClassificationLevel;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface JudicialAuthorityMetadata {
