@@ -82,6 +82,12 @@ export enum CadDispatchStatus {
   INCIDENT_RESOLVED = "INCIDENT_RESOLVED"
 }
 
+export enum SystemHealthStatus {
+  HEALTHY = "HEALTHY",
+  DEGRADED = "DEGRADED",
+  UNHEALTHY = "UNHEALTHY"
+}
+
 export enum IncidentPersonRole {
   SUSPECT = "SUSPECT",
   VICTIM = "VICTIM",
@@ -371,6 +377,14 @@ export enum IdentityMatchStatus {
   NO_MATCH = "NO_MATCH"
 }
 
+export interface TelemetryPoint {
+  latitude: number;
+  longitude: number;
+  speedKmH: number;
+  timestamp: string;
+  dutyStatus: string;
+}
+
 export interface UserSessionPayload {
   officerId: string;
   badgeNumber: string;
@@ -439,13 +453,40 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface SystemHealthReport {
+  status: SystemHealthStatus;
+  version: string;
+  uptimeSeconds: number;
+  components: {
+    database: { status: "UP" | "DOWN"; latencyMs: number };
+    redis: { status: "UP" | "DOWN"; latencyMs: number };
+    s3EvidenceVault: { status: "UP" | "DOWN"; latencyMs: number };
+    auditLedgerIntegrity: { status: "INTACT" | "CORRUPTED" };
+  };
+  k8sClusterMetrics: {
+    activePods: number;
+    desiredPods: number;
+    cpuUtilizationPercentage: number;
+    memoryUtilizationPercentage: number;
+  };
+  timestamp: string;
+}
+
+export interface EdgeNodeSyncStatus {
+  stateName: string;
+  nodeId: string;
+  status: "ONLINE" | "DEGRADED" | "OFFLINE";
+  lastSyncTimestamp: string;
+  pendingOfflineTxCount: number;
+}
+
 export interface PatrolUnitTelemetry {
   unitId: string;
   unitCallsign: string;
   assignedOfficerId: string;
   assignedOfficerName: string;
   state: string;
-  dutyStatus: string; // 'ON_PATROL' | 'RESPONDING' | 'ON_SCENE' | 'SOS_EMERGENCY'
+  dutyStatus: string;
   latitude: number;
   longitude: number;
   speedKmH: number;
@@ -454,7 +495,7 @@ export interface PatrolUnitTelemetry {
 
 export interface CadIncidentRecord {
   id: string;
-  cadIncidentNumber: string; // e.g. "CAD-2026-EDO-00912"
+  cadIncidentNumber: string;
   title: string;
   category: string;
   priority: IncidentPriority;
@@ -816,14 +857,6 @@ export interface CameraDevice {
   lastSyncTimestamp: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface TelemetryPoint {
-  latitude: number;
-  longitude: number;
-  speedKmH: number;
-  timestamp: string;
-  dutyStatus: string;
 }
 
 export interface TimeSyncMarker {

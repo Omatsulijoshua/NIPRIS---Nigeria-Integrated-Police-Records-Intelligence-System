@@ -1,0 +1,32 @@
+# Production Multi-Stage Dockerfile for NIPRIS Next.js Web Portal
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY packages/types/package*.json ./packages/types/
+COPY apps/web/package*.json ./apps/web/
+
+RUN npm ci --workspace=@nipris/types --workspace=@nipris/web
+
+COPY packages/types ./packages/types
+COPY apps/web ./apps/web
+
+RUN npm run build --workspace=@nipris/types
+RUN npm run build --workspace=@nipris/web
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/web/.next ./apps/web/.next
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/package*.json ./apps/web/
+
+USER node
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start", "--workspace=@nipris/web"]
