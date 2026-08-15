@@ -38,17 +38,17 @@ export default function StationDashboardPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 font-mono text-xs">
       {/* Header & Role Switcher */}
-      <div className="flex items-center justify-between bg-slate-900 p-6 border border-slate-800 rounded-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-4 sm:p-6 border border-slate-800 rounded-lg">
         <div>
-          <h2 className="text-2xl font-bold text-amber-500">🏬 NIPRIS STATION — COMMAND & OPERATIONS DASHBOARD</h2>
-          <p className="text-xs text-slate-400">Benin Central Police Station | Division: Benin Central | Command: Edo State Command</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-amber-500">🏬 NIPRIS STATION — COMMAND & OPERATIONS DASHBOARD</h2>
+          <p className="text-[10px] sm:text-xs text-slate-400">Benin Central Police Station | Division: Benin Central | Command: Edo State Command</p>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-[10px] text-slate-400 font-bold">ADAPTIVE ROLE VIEW:</span>
+        <div className="flex items-center space-x-2 shrink-0">
+          <span className="text-[10px] text-slate-400 font-bold hidden sm:inline">ROLE VIEW:</span>
           <select
             value={selectedRole}
             onChange={(e: any) => setSelectedRole(e.target.value)}
-            className="bg-slate-950 border border-slate-700 rounded p-2 text-xs font-bold text-amber-400"
+            className="w-full sm:w-auto bg-slate-950 border border-slate-700 rounded p-2 text-xs font-bold text-amber-400"
           >
             <option value="STATION_COMMANDER">Station Commander View</option>
             <option value="DESK_OFFICER">Desk Officer View</option>
@@ -60,60 +60,60 @@ export default function StationDashboardPage() {
       </div>
 
       {/* TODAY Dashboard Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">OFFICERS ON DUTY</div>
-          <div className="text-emerald-400 font-bold text-2xl">{metrics.officersOnDuty} Active</div>
+          <div className="text-emerald-400 font-bold text-xl sm:text-2xl">{metrics.officersOnDuty} Active</div>
           <div className="text-[10px] text-slate-400">{metrics.officersOffDuty} Off Duty | 2 On Leave</div>
         </div>
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">TODAY INCIDENTS</div>
-          <div className="text-amber-400 font-bold text-2xl">{metrics.incidentsToday} Reported</div>
+          <div className="text-amber-400 font-bold text-xl sm:text-2xl">{metrics.incidentsToday} Reported</div>
           <div className="text-[10px] text-slate-400">{metrics.openIncidents} Open Under Investigation</div>
         </div>
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">STATION CUSTODY</div>
-          <div className="text-slate-100 font-bold text-2xl">{metrics.currentlyDetained} / {metrics.cellCapacity}</div>
+          <div className="text-slate-100 font-bold text-xl sm:text-2xl">{metrics.currentlyDetained} / {metrics.cellCapacity}</div>
           <div className="text-[10px] text-slate-400">Holding Cell Occupancy: 60%</div>
         </div>
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">ACTIVE INVESTIGATIONS</div>
-          <div className="text-indigo-400 font-bold text-2xl">{metrics.activeCases} Cases</div>
+          <div className="text-indigo-400 font-bold text-xl sm:text-2xl">{metrics.activeCases} Cases</div>
           <div className="text-[10px] text-slate-400">3 Pending Prosecution Sheet</div>
         </div>
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">ARRESTS BOOKED TODAY</div>
-          <div className="text-red-400 font-bold text-xl">{metrics.arrestsToday} Booked</div>
+          <div className="text-red-400 font-bold text-lg sm:text-xl">{metrics.arrestsToday} Booked</div>
           <div className="text-[10px] text-slate-400">11 This Week | 42 This Month</div>
         </div>
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">EVIDENCE IN STORAGE</div>
-          <div className="text-amber-400 font-bold text-xl">{metrics.evidenceReceivedToday} Intake Today</div>
+          <div className="text-amber-400 font-bold text-lg sm:text-xl">{metrics.evidenceReceivedToday} Intake Today</div>
           <div className="text-[10px] text-slate-400">87 Total Items Sealed</div>
         </div>
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">BODYCAMS ACTIVE</div>
-          <div className="text-emerald-400 font-bold text-xl">{metrics.bodycamsActive} Online</div>
+          <div className="text-emerald-400 font-bold text-lg sm:text-xl">{metrics.bodycamsActive} Online</div>
           <div className="text-[10px] text-slate-400">2 Video Uploads Pending</div>
         </div>
 
         <div className="p-4 bg-slate-900 border border-slate-800 rounded-lg space-y-1">
           <div className="text-[10px] text-slate-500">STATION FLEET</div>
-          <div className="text-slate-100 font-bold text-xl">{metrics.vehiclesAvailable} Available</div>
+          <div className="text-slate-100 font-bold text-lg sm:text-xl">{metrics.vehiclesAvailable} Available</div>
           <div className="text-[10px] text-slate-400">3 In Use | 2 On Patrol</div>
         </div>
       </div>
 
       {/* Grid Layout: Activity Feed & Operational Alerts */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Activity Feed (2 Cols) */}
-        <div className="col-span-2 p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
+        <div className="lg:col-span-2 p-4 sm:p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
           <div className="flex justify-between items-center border-b border-slate-800 pb-2">
             <h3 className="font-bold text-slate-200">⚡ REAL-TIME STATION ACTIVITY FEED</h3>
             <span className="text-[10px] text-slate-500">Live operational events</span>
@@ -122,9 +122,9 @@ export default function StationDashboardPage() {
           <div className="space-y-3">
             {activityFeed.map((act) => (
               <div key={act.id} className="p-3 bg-slate-950 border border-slate-800 rounded space-y-1">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span className="font-bold text-slate-100">{act.title}</span>
-                  <span className="text-[10px] text-slate-500">{act.time}</span>
+                  <span className="text-[10px] text-slate-500 shrink-0">{act.time}</span>
                 </div>
                 <div className="text-slate-300">{act.details}</div>
                 <div className="text-[10px] text-amber-400">Logged by: {act.actor}</div>
@@ -134,7 +134,7 @@ export default function StationDashboardPage() {
         </div>
 
         {/* Operational Alerts HUD (1 Col) */}
-        <div className="p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
+        <div className="p-4 sm:p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
           <div className="flex justify-between items-center border-b border-slate-800 pb-2">
             <h3 className="font-bold text-red-400">🔔 URGENT STATION ALERTS</h3>
             <span className="px-2 py-0.5 bg-red-950 text-red-400 font-bold rounded text-[10px]">3 ALERTS</span>

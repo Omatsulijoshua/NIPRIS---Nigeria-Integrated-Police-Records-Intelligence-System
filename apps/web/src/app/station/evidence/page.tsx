@@ -61,61 +61,61 @@ export default function StationEvidenceRoomPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-mono text-xs">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-amber-500">📦 EVIDENCE ROOM & STORAGE LAYOUT MANAGEMENT</h2>
-          <p className="text-xs text-slate-400">Physical storage layout (Rooms, Racks, Safes), barcode tags, & Chain-of-Custody ledger.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-amber-500">📦 EVIDENCE ROOM & STORAGE LAYOUT MANAGEMENT</h2>
+          <p className="text-[10px] sm:text-xs text-slate-400">Physical storage layout (Rooms, Racks, Safes), barcode tags, & Chain-of-Custody ledger.</p>
         </div>
         <button
           onClick={() => setShowIntakeModal(true)}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded text-xs transition"
+          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded text-xs transition shrink-0"
         >
           + Intake Physical Evidence
         </button>
       </div>
 
       {/* Storage Layout Map */}
-      <div className="p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
+      <div className="p-4 sm:p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
         <h3 className="font-bold text-slate-200 border-b border-slate-800 pb-2">STATION STORAGE LOCATION LAYOUT BINS</h3>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {locations.map((l) => (
             <div key={l.code} className="p-4 bg-slate-950 border border-slate-800 rounded space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center flex-wrap gap-1">
                 <span className="font-bold text-amber-400 text-xs">{l.code}</span>
                 {l.isHighSecurity && (
                   <span className="px-2 py-0.5 bg-red-950 text-red-400 border border-red-800 font-bold rounded text-[9px]">HIGH SECURITY</span>
                 )}
               </div>
               <div className="text-slate-100 font-bold text-xs">{l.name}</div>
-              <div className="text-[10px] text-slate-400">Type: {l.type} | Currently Stored: <span className="text-emerald-400 font-bold">{l.itemCount} Items</span></div>
+              <div className="text-[10px] text-slate-400">Type: {l.type} | Stored: <span className="text-emerald-400 font-bold">{l.itemCount} Items</span></div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Evidence Ledger */}
-      <div className="p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
+      <div className="p-4 sm:p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
         <h3 className="font-bold text-slate-200 border-b border-slate-800 pb-2">STORED PHYSICAL EVIDENCE LEDGER</h3>
         <div className="space-y-4">
           {evidenceList.map((e) => (
             <div key={e.evidenceNumber} className="p-4 bg-slate-950 border border-slate-800 rounded space-y-2">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                   <span className="font-bold text-amber-500">{e.evidenceNumber}</span>
                   <span className="px-2 py-0.5 bg-slate-800 text-slate-300 font-bold rounded text-[10px]">{e.category}</span>
                   <span className="px-2 py-0.5 bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold rounded text-[9px]">{e.barcodeTag}</span>
                 </div>
-                <span className={`px-2 py-0.5 font-bold rounded text-[10px] ${e.status === 'IN_STORAGE' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
+                <span className={`px-2 py-0.5 font-bold rounded text-[10px] self-start sm:self-auto ${e.status === 'IN_STORAGE' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`}>
                   {e.status}
                 </span>
               </div>
               <div className="text-slate-100 font-bold text-xs">{e.description}</div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[10px] text-slate-400 pt-1">
                 <div>Storage Location: <span className="text-amber-400 font-bold">{e.storageCode}</span></div>
                 <div>Intake Officer: <span className="text-slate-200 font-bold">{e.intakeOfficer}</span></div>
               </div>
               {e.status === 'IN_STORAGE' && (
-                <div className="pt-2 flex justify-end space-x-2">
+                <div className="pt-2 flex justify-end">
                   <button
                     onClick={() => handleCheckout(e.evidenceNumber)}
                     className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded text-[10px]"
@@ -132,9 +132,9 @@ export default function StationEvidenceRoomPage() {
       {/* Intake Modal */}
       {showIntakeModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-lg w-full max-w-lg space-y-4">
-            <h3 className="text-lg font-bold text-amber-500 border-b border-slate-800 pb-2">PHYSICAL EVIDENCE INTAKE</h3>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-lg w-full max-w-lg space-y-4">
+            <h3 className="text-base sm:text-lg font-bold text-amber-500 border-b border-slate-800 pb-2">PHYSICAL EVIDENCE INTAKE</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] text-slate-400 mb-1">EVIDENCE CATEGORY</label>
                 <select

@@ -43,7 +43,6 @@ export default function StationCustodyPage() {
 
   const [showIntakeModal, setShowIntakeModal] = useState(false);
   const [personName, setPersonName] = useState('');
-  const [arrestId, setArrestId] = useState('ARR-2026-EDO-00912');
   const [cellId, setCellId] = useState('CELL-01');
   const [reason, setReason] = useState('');
 
@@ -69,26 +68,26 @@ export default function StationCustodyPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 font-mono text-xs">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-amber-500">🔒 LOCAL STATION CUSTODY & PROPERTY INTAKE</h2>
-          <p className="text-xs text-slate-400">Holding cell management, suspect personal property vouchers, & 24h/48h constitutional detention clock.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-amber-500">🔒 LOCAL STATION CUSTODY & PROPERTY INTAKE</h2>
+          <p className="text-[10px] sm:text-xs text-slate-400">Holding cell management, suspect personal property vouchers, & 24h/48h constitutional detention clock.</p>
         </div>
         <button
           onClick={() => setShowIntakeModal(true)}
-          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded text-xs transition"
+          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded text-xs transition shrink-0"
         >
           + Process Detainee Custody Intake
         </button>
       </div>
 
       {/* Cell Capacity & Occupancy HUD */}
-      <div className="p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+      <div className="p-4 sm:p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-800 pb-2">
           <h3 className="font-bold text-slate-200">HOLDING CELL OCCUPANCY & CAPACITY HUD</h3>
-          <span className="text-slate-400 font-bold">TOTAL CAPACITY: {cellStatus.capacityLimit} DETAINEES</span>
+          <span className="text-slate-400 font-bold text-[10px] sm:text-xs">TOTAL CAPACITY: {cellStatus.capacityLimit} DETAINEES</span>
         </div>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {cellStatus.cells.map((cell) => (
             <div key={cell.cellId} className="p-4 bg-slate-950 border border-slate-800 rounded space-y-2">
               <div className="flex justify-between items-center">
@@ -107,24 +106,24 @@ export default function StationCustodyPage() {
       </div>
 
       {/* Active Detainees Ledger */}
-      <div className="p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
+      <div className="p-4 sm:p-6 bg-slate-900 border border-slate-800 rounded-lg space-y-4">
         <h3 className="font-bold text-slate-200 border-b border-slate-800 pb-2">ACTIVE STATION CUSTODY RECORDS</h3>
         <div className="space-y-4">
           {detainees.map((d) => (
             <div key={d.custodyNumber} className="p-4 bg-slate-950 border border-slate-800 rounded space-y-2">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
-                <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2">
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                   <span className="font-bold text-amber-500">{d.custodyNumber}</span>
                   <span className="px-2 py-0.5 bg-slate-800 text-slate-200 font-bold rounded text-[10px]">CELL: {d.cellId}</span>
                   <span className="px-2 py-0.5 bg-red-950 text-red-400 border border-red-800 font-bold rounded text-[9px]">RISK: {d.risk}</span>
                 </div>
-                <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold rounded text-[10px]">
+                <span className="px-2 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold rounded text-[10px] self-start sm:self-auto">
                   {d.status}
                 </span>
               </div>
               <div className="text-slate-100 font-bold text-sm">{d.personName}</div>
               <p className="text-slate-300 font-bold text-xs">{d.reason}</p>
-              <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] text-slate-400 pt-1">
                 <div>Property Voucher: <span className="text-amber-400 font-bold">{d.propertyVoucher}</span></div>
                 <div>Constitutional Remand Clock: <span className="text-red-400 font-bold">{d.detentionDeadline}</span></div>
               </div>
@@ -136,9 +135,9 @@ export default function StationCustodyPage() {
       {/* Intake Modal */}
       {showIntakeModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-lg w-full max-w-lg space-y-4">
-            <h3 className="text-lg font-bold text-amber-500 border-b border-slate-800 pb-2">PROCESS DETAINEE CUSTODY INTAKE</h3>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-900 border border-slate-800 p-4 sm:p-6 rounded-lg w-full max-w-lg space-y-4">
+            <h3 className="text-base sm:text-lg font-bold text-amber-500 border-b border-slate-800 pb-2">PROCESS DETAINEE CUSTODY INTAKE</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] text-slate-400 mb-1">DETAINEE FULL NAME</label>
                 <input
