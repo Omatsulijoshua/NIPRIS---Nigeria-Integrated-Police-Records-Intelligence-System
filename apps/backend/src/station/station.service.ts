@@ -4,7 +4,10 @@ import { CreateStationUnitDto } from './dto/create-station-unit.dto';
 import { AssignStationOfficerDto } from './dto/assign-station-officer.dto';
 import { CreateDiaryEntryDto } from './dto/create-diary-entry.dto';
 import { SearchDiaryEntriesDto } from './dto/search-diary-entries.dto';
-import { OfficerRole, OrgLevel } from '@nipris/types';
+import { CreateComplaintDto } from './dto/create-complaint.dto';
+import { AssignComplaintDto } from './dto/assign-complaint.dto';
+import { ConvertComplaintToIncidentDto } from './dto/convert-complaint-to-incident.dto';
+import { ComplaintStatus, OfficerRole, OrgLevel } from '@nipris/types';
 
 export interface StationProfileRecord {
   id: string;
@@ -80,7 +83,7 @@ export interface StationAlertItem {
 
 export interface StationDiaryRecord {
   id: string;
-  entryNumber: string; // e.g. SDE-2026-STN001-00912
+  entryNumber: string;
   stationId: string;
   recordedAt: string;
   officerId: string;
@@ -100,6 +103,28 @@ export interface StationDiaryRecord {
   createdAt: string;
 }
 
+export interface StationComplaintRecord {
+  id: string;
+  complaintNumber: string; // CMP-2026-STN001-00912
+  stationId: string;
+  receivedAt: string;
+  complainantName: string;
+  complainantPhone?: string;
+  complainantPersonId?: string;
+  originSource: string;
+  category: string;
+  description: string;
+  locationName: string;
+  receivingOfficerId: string;
+  assignedOfficerId?: string;
+  assignedOfficerName?: string;
+  status: ComplaintStatus;
+  resultingIncidentId?: string;
+  resultingCaseId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 @Injectable()
 export class StationService {
   private readonly logger = new Logger(StationService.name);
@@ -107,6 +132,7 @@ export class StationService {
   private readonly unitsStore = new Map<string, StationUnitRecord[]>();
   private readonly officerAssignmentsStore = new Map<string, StationOfficerAssignment[]>();
   private readonly diaryStore = new Map<string, StationDiaryRecord[]>();
+  private readonly complaintsStore = new Map<string, StationComplaintRecord[]>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -171,25 +197,32 @@ export class StationService {
         auditHistory: [{ timestamp: new Date(Date.now() - 30 * 60000).toISOString(), action: 'ENTRY_CREATED', performedBy: 'Insp Grace Enagbare (NPF-94102)' }],
         createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
       },
-      {
-        id: 'sde_002',
-        entryNumber: 'SDE-2026-STN001-00913',
-        stationId,
-        recordedAt: new Date(Date.now() - 15 * 60000).toISOString(),
-        officerId: 'off_patrol_001',
-        officerName: 'Sgt Monday Usifo',
-        officerBadge: 'NPF-66120',
-        eventType: 'PATROL_DEPARTURE',
-        description: 'Patrol Team Alpha departed station for routine patrol along Benin-Sapele expressway.',
-        vehicleId: 'veh_patrol_01',
-        attachments: [],
-        isImmutable: true,
-        versionIndex: 1,
-        auditHistory: [{ timestamp: new Date(Date.now() - 15 * 60000).toISOString(), action: 'ENTRY_CREATED', performedBy: 'Sgt Monday Usifo (NPF-66120)' }],
-        createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
-      },
     ];
     this.diaryStore.set(stationId, diaryEntries);
+
+    // Seed Complaints
+    const complaints: StationComplaintRecord[] = [
+      {
+        id: 'cmp_001',
+        complaintNumber: 'CMP-2026-STN001-00912',
+        stationId,
+        receivedAt: new Date(Date.now() - 60 * 60000).toISOString(),
+        complainantName: 'Chief Emeka Nnamdi',
+        complainantPhone: '+234-803-555-0192',
+        originSource: 'WALK_IN_CITIZEN',
+        category: 'ARMED_ROBBERY',
+        description: 'Complainant states armed robbers invaded premises along Ring Road at 02:00 hours.',
+        locationName: 'Ring Road, Benin City',
+        receivingOfficerId: 'off_desk_001',
+        assignedOfficerId: 'off_cid_001',
+        assignedOfficerName: 'DSP Chidi Okonkwo',
+        status: ComplaintStatus.CONVERTED_TO_INCIDENT,
+        resultingIncidentId: 'INC-2026-EDO-00912',
+        createdAt: new Date(Date.now() - 60 * 60000).toISOString(),
+        updatedAt: new Date(Date.now() - 60 * 60000).toISOString(),
+      },
+    ];
+    this.complaintsStore.set(stationId, complaints);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -393,5 +426,93 @@ export class StationService {
       }
     }
     throw new NotFoundException(`Station Diary Entry ${entryId} not found`);
+  }
+
+  // --- STATION COMPLAINT MANAGEMENT SUBSYSTEM ---
+
+  async createComplaint(dto: CreateComplaintDto): Promise<StationComplaintRecord> {
+    const complaintNumber = `CMP-2026-STN001-${Math.floor(10000 + Math.random() * 90000)}`;
+    const now = new Date().toISOString();
+
+    const record: StationComplaintRecord = {
+      id: `cmp_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      complaintNumber,
+      stationId: dto.stationId,
+      receivedAt: now,
+      complainantName: dto.complainantName,
+      complainantPhone: dto.complainantPhone,
+      complainantPersonId: dto.complainantPersonId,
+      originSource: dto.originSource,
+      category: dto.category,
+      description: dto.description,
+      locationName: dto.locationName,
+      receivingOfficerId: dto.receivingOfficerId,
+      status: ComplaintStatus.NEW,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const existing = this.complaintsStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.complaintsStore.set(dto.stationId, existing);
+
+    // Automatically log in Station Diary
+    await this.createDiaryEntry({
+      stationId: dto.stationId,
+      officerId: dto.receivingOfficerId,
+      eventType: 'COMPLAINT_RECEIVED',
+      description: `Complaint ${complaintNumber} received from ${dto.complainantName}: ${dto.category}`,
+    });
+
+    this.logger.log(`Created Station Complaint ${complaintNumber} from ${dto.complainantName}`);
+    return record;
+  }
+
+  async getStationComplaints(stationId: string): Promise<StationComplaintRecord[]> {
+    return this.complaintsStore.get(stationId) || [];
+  }
+
+  async assignComplaint(dto: AssignComplaintDto): Promise<StationComplaintRecord> {
+    for (const [, complaints] of this.complaintsStore.entries()) {
+      const match = complaints.find((c) => c.id === dto.complaintId || c.complaintNumber === dto.complaintId);
+      if (match) {
+        match.assignedOfficerId = dto.assignedOfficerId;
+        match.assignedOfficerName = 'DSP Chidi Okonkwo';
+        match.status = ComplaintStatus.ASSIGNED;
+        match.updatedAt = new Date().toISOString();
+        this.logger.log(`Assigned Complaint ${match.complaintNumber} to Officer ${dto.assignedOfficerId}`);
+        return match;
+      }
+    }
+    throw new NotFoundException(`Complaint ${dto.complaintId} not found`);
+  }
+
+  async convertComplaintToIncident(dto: ConvertComplaintToIncidentDto): Promise<{ complaint: StationComplaintRecord; incidentNumber: string }> {
+    for (const [, complaints] of this.complaintsStore.entries()) {
+      const match = complaints.find((c) => c.id === dto.complaintId || c.complaintNumber === dto.complaintId);
+      if (match) {
+        const incidentNumber = `INC-2026-EDO-${Math.floor(10000 + Math.random() * 90000)}`;
+        match.resultingIncidentId = incidentNumber;
+        match.status = ComplaintStatus.CONVERTED_TO_INCIDENT;
+        match.updatedAt = new Date().toISOString();
+
+        this.logger.log(`Converted Complaint ${match.complaintNumber} to Incident ${incidentNumber}`);
+        return { complaint: match, incidentNumber };
+      }
+    }
+    throw new NotFoundException(`Complaint ${dto.complaintId} not found`);
+  }
+
+  async closeComplaint(complaintId: string, resolutionNotes: string): Promise<StationComplaintRecord> {
+    for (const [, complaints] of this.complaintsStore.entries()) {
+      const match = complaints.find((c) => c.id === complaintId || c.complaintNumber === complaintId);
+      if (match) {
+        match.status = ComplaintStatus.CLOSED;
+        match.updatedAt = new Date().toISOString();
+        this.logger.log(`Closed Complaint ${match.complaintNumber} without arrest: ${resolutionNotes}`);
+        return match;
+      }
+    }
+    throw new NotFoundException(`Complaint ${complaintId} not found`);
   }
 }

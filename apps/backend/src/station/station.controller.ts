@@ -6,9 +6,12 @@ import { CreateStationUnitDto } from './dto/create-station-unit.dto';
 import { AssignStationOfficerDto } from './dto/assign-station-officer.dto';
 import { CreateDiaryEntryDto } from './dto/create-diary-entry.dto';
 import { SearchDiaryEntriesDto } from './dto/search-diary-entries.dto';
+import { CreateComplaintDto } from './dto/create-complaint.dto';
+import { AssignComplaintDto } from './dto/assign-complaint.dto';
+import { ConvertComplaintToIncidentDto } from './dto/convert-complaint-to-incident.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command & Station Diary Subsystem')
+@ApiTags('NIPRIS Station Organization, Command, Diary & Complaints Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -163,6 +166,66 @@ export class StationController {
     return {
       success: true,
       data: timeline,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('complaints')
+  @ApiOperation({ summary: 'Intake New Citizen or Officer Complaint' })
+  async createComplaint(@Body() dto: CreateComplaintDto) {
+    const complaint = await this.stationService.createComplaint(dto);
+    return {
+      success: true,
+      message: `Complaint ${complaint.complaintNumber} registered cleanly.`,
+      data: complaint,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('complaints/:stationId')
+  @ApiOperation({ summary: 'List Station Complaints' })
+  async getStationComplaints(@Param('stationId') stationId: string) {
+    const complaints = await this.stationService.getStationComplaints(stationId);
+    return {
+      success: true,
+      count: complaints.length,
+      data: complaints,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('complaints/assign')
+  @ApiOperation({ summary: 'Assign Complaint to Investigating Officer' })
+  async assignComplaint(@Body() dto: AssignComplaintDto) {
+    const complaint = await this.stationService.assignComplaint(dto);
+    return {
+      success: true,
+      message: `Complaint ${complaint.complaintNumber} assigned to Officer ${dto.assignedOfficerId}.`,
+      data: complaint,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('complaints/convert-to-incident')
+  @ApiOperation({ summary: 'Convert Station Complaint to Formal Incident' })
+  async convertComplaintToIncident(@Body() dto: ConvertComplaintToIncidentDto) {
+    const result = await this.stationService.convertComplaintToIncident(dto);
+    return {
+      success: true,
+      message: `Complaint ${result.complaint.complaintNumber} converted to Incident ${result.incidentNumber}.`,
+      data: result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('complaints/:id/close')
+  @ApiOperation({ summary: 'Close Complaint Without Forced Arrest' })
+  async closeComplaint(@Param('id') id: string, @Body('resolutionNotes') notes: string) {
+    const complaint = await this.stationService.closeComplaint(id, notes || 'Resolved administratively');
+    return {
+      success: true,
+      message: `Complaint ${complaint.complaintNumber} closed.`,
+      data: complaint,
       timestamp: new Date().toISOString(),
     };
   }

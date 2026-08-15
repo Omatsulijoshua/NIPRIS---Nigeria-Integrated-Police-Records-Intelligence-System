@@ -90,6 +90,17 @@ export enum SystemHealthStatus {
   UNHEALTHY = "UNHEALTHY"
 }
 
+export enum ComplaintStatus {
+  NEW = "NEW",
+  RECEIVED = "RECEIVED",
+  UNDER_REVIEW = "UNDER_REVIEW",
+  ASSIGNED = "ASSIGNED",
+  CONVERTED_TO_INCIDENT = "CONVERTED_TO_INCIDENT",
+  CONVERTED_TO_CASE = "CONVERTED_TO_CASE",
+  REFERRED = "REFERRED",
+  CLOSED = "CLOSED"
+}
+
 export enum IncidentPersonRole {
   SUSPECT = "SUSPECT",
   VICTIM = "VICTIM",
