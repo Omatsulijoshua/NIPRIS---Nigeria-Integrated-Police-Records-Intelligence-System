@@ -128,6 +128,38 @@ export interface OfficerProfile {
   createdAt: string;
 }
 
+export interface PersonIdentifier {
+  type: "NIN" | "DRIVERS_LICENSE" | "VOTER_ID" | "PASSPORT";
+  value: string;
+}
+
+export interface PersonMasterRecord {
+  id: string;
+  nin?: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  aliases: string[];
+  dateOfBirth: string;
+  sex: string;
+  nationality: string;
+  photoUrl?: string;
+  biometricRef?: string;
+  classification: ClassificationLevel;
+  identifiers: PersonIdentifier[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IdentityResolutionResult {
+  status: IdentityMatchStatus;
+  confidenceScore: number; // 0 to 100
+  matchedPerson?: PersonMasterRecord;
+  possibleCandidates: PersonMasterRecord[];
+  requiresHumanVerification: boolean;
+  notes: string;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
