@@ -32,6 +32,8 @@ enum OfficerRole {
   INTERNAL_AFFAIRS
   COURT_INTEGRATION
   READ_ONLY_VIEWER
+  STATION_ADMIN
+  DESK_OFFICER
 }
 
 enum LegalStatus {
@@ -63,20 +65,405 @@ enum ClassificationLevel {
   EVIDENCE_RESTRICTED
 }
 
+enum ComplaintStatus {
+  NEW
+  RECEIVED
+  UNDER_REVIEW
+  ASSIGNED
+  CONVERTED_TO_INCIDENT
+  CONVERTED_TO_CASE
+  REFERRED
+  CLOSED
+}
+
+enum ShiftType {
+  DAY
+  EVENING
+  NIGHT
+  PATROL
+  INVESTIGATION
+  DESK
+  SPECIAL_ASSIGNMENT
+}
+
+enum OperationalStatus {
+  ON_DUTY
+  OFF_DUTY
+  ON_PATROL
+  AT_STATION
+  ON_ASSIGNMENT
+  ON_LEAVE
+  SUSPENDED
+  UNAVAILABLE
+  EMERGENCY_ASSIGNMENT
+}
+
+enum LocalCustodyStatus {
+  IN_CUSTODY
+  RELEASED
+  TRANSFERRED
+  COURT_TRANSFER
+  BAIL_GRANTED
+}
+
+enum StationVehicleStatus {
+  AVAILABLE
+  IN_USE
+  PATROL
+  MAINTENANCE
+  OUT_OF_SERVICE
+  RESERVED
+}
+
+enum EquipmentStatus {
+  AVAILABLE
+  CHECKED_OUT
+  MAINTENANCE
+  DECOMMISSIONED
+  LOST_MISSING
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
 model Organization {
-  id          String         @id @default(uuid())
-  code        String         @unique
-  name        String
-  level       OrgLevel
-  parentId    String?
-  parent      Organization?  @relation("OrgHierarchy", fields: [parentId], references: [id])
-  children    Organization[] @relation("OrgHierarchy")
-  state       String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  officers    Officer[]
+  id               String                 @id @default(uuid())
+  code             String                 @unique
+  name             String
+  level            OrgLevel
+  parentId         String?
+  parent           Organization?          @relation("OrgHierarchy", fields: [parentId], references: [id])
+  children         Organization[]         @relation("OrgHierarchy")
+  state            String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  officers         Officer[]
+  stationProfile   StationProfile?
+  diaryEntries     StationDiaryEntry[]
+  complaints       StationComplaint[]
+  dutyShifts       DutyShift[]
+  dutyAssignments  DutyAssignment[]
+  attendance       OfficerAttendance[]
+  custodyRecords   LocalCustodyRecord[]
+  storageLocations StationStorageLocation[]
+  vehicles         StationVehicle[]
+  equipment        StationEquipment[]
+  visitors         StationVisitorLog[]
+  tasks            StationTask[]
+  approvalRequests StationApprovalRequest[]
 
   @@map("organizations")
+}
+
+model StationProfile {
+  id                 String       @id @default(uuid())
+  organizationId     String       @unique
+  organization       Organization @relation(fields: [organizationId], references: [id])
+  stationCode        String       @unique
+  lga                String
+  address            String
+  phoneNumber        String
+  email              String?
+  commanderOfficerId String?
+  holdingCellCapacity Int         @default(10)
+  latitude           Float?
+  longitude          Float?
+  operatingHours     String       @default("24/7")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("station_profiles")
+}
+
+model StationUnit {
+  id             String   @id @default(uuid())
+  stationId      String
+  name           String   // e.g. "Patrol", "CID", "Traffic", "Desk Guard"
+  code           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("station_units")
+}
+
+model StationDiaryEntry {
+  id            String       @id @default(uuid())
+  entryNumber   String       @unique // e.g. SDE-2026-STN001-00912
+  stationId     String
+  station       Organization @relation(fields: [stationId], references: [id])
+  recordedAt    DateTime     @default(now())
+  officerId     String
+  eventType     String       // Complaint, Arrest, Release, Patrol Departure, Incident, Visitor, Maintenance
+  description   String
+  incidentId    String?
+  caseId        String?
+  personId      String?
+  vehicleId     String?
+  evidenceId    String?
+  attachments   String[]
+  isImmutable   Boolean      @default(true)
+  versionIndex  Int          @default(1)
+  createdAt     DateTime     @default(now())
+
+  @@map("station_diary_entries")
+}
+
+model StationComplaint {
+  id                  String          @id @default(uuid())
+  complaintNumber     String          @unique // e.g. CMP-2026-STN001-00912
+  stationId           String
+  station             Organization    @relation(fields: [stationId], references: [id])
+  receivedAt          DateTime        @default(now())
+  complainantPersonId String?
+  complainantName     String
+  complainantPhone    String?
+  category            String
+  description         String
+  locationName        String
+  receivingOfficerId  String
+  assignedOfficerId   String?
+  status              ComplaintStatus @default(NEW)
+  resultingIncidentId String?
+  resultingCaseId     String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@map("station_complaints")
+}
+
+model DutyShift {
+  id          String           @id @default(uuid())
+  stationId   String
+  station     Organization     @relation(fields: [stationId], references: [id])
+  shiftType   ShiftType
+  shiftName   String           // "Morning Shift A", "Night Patrol B"
+  startTime   String           // "08:00"
+  endTime     String           // "16:00"
+  assignments DutyAssignment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("duty_shifts")
+}
+
+model DutyAssignment {
+  id         String       @id @default(uuid())
+  shiftId    String
+  shift      DutyShift    @relation(fields: [shiftId], references: [id])
+  stationId  String
+  station    Organization @relation(fields: [stationId], references: [id])
+  officerId  String
+  assignedAt DateTime     @default(now())
+  dutyDate   DateTime
+  notes      String?
+
+  @@map("duty_assignments")
+}
+
+model OfficerAttendance {
+  id                String            @id @default(uuid())
+  officerId         String
+  stationId         String
+  station           Organization      @relation(fields: [stationId], references: [id])
+  clockInTimestamp  DateTime          @default(now())
+  clockOutTimestamp DateTime?
+  operationalStatus OperationalStatus @default(ON_DUTY)
+  shiftId           String?
+  notes             String?
+
+  @@map("attendance_records")
+}
+
+model LocalCustodyRecord {
+  id                 String             @id @default(uuid())
+  custodyNumber      String             @unique // e.g. CUS-2026-STN001-00912
+  stationId          String
+  station            Organization       @relation(fields: [stationId], references: [id])
+  personId           String
+  person             PersonMaster       @relation(fields: [personId], references: [id])
+  arrestId           String?
+  arrest             Arrest?            @relation(fields: [arrestId], references: [id])
+  arrivedAt          DateTime           @default(now())
+  arrestingOfficerId String
+  legalBasis         String
+  cellNumber         String
+  status             LocalCustodyStatus @default(IN_CUSTODY)
+  custodyEvents      CustodyEvent[]
+  propertyRecords    PersonProperty[]
+  releasedAt         DateTime?
+  releaseType        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@map("custody_records")
+}
+
+model CustodyEvent {
+  id              String             @id @default(uuid())
+  custodyRecordId String
+  custodyRecord   LocalCustodyRecord @relation(fields: [custodyRecordId], references: [id])
+  eventType       String             // BOOKING, PROPERTY_RECORD, MEDICAL_CHECK, LEGAL_VISIT, COURT_TRANSFER, RELEASE
+  description     String
+  performedById   String
+  timestamp       DateTime           @default(now())
+
+  @@map("custody_events")
+}
+
+model PersonProperty {
+  id              String             @id @default(uuid())
+  propertyNumber  String             @unique
+  custodyRecordId String
+  custodyRecord   LocalCustodyRecord @relation(fields: [custodyRecordId], references: [id])
+  description     String
+  quantity        Int                @default(1)
+  condition       String             // "GOOD", "DAMAGED", "SEALED"
+  intakeOfficerId String
+  storageLockerId String?
+  isReturned      Boolean            @default(false)
+  returnedAt      DateTime?
+  timestamp       DateTime           @default(now())
+
+  @@map("property_records")
+}
+
+model StationStorageLocation {
+  id          String       @id @default(uuid())
+  stationId   String
+  station     Organization @relation(fields: [stationId], references: [id])
+  roomName    String       // "Evidence Room A"
+  shelfCode   String       // "Shelf 3"
+  cabinetCode String?      // "Cabinet B"
+  lockerCode  String?      // "Locker 12"
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("station_storage_locations")
+}
+
+model StationVehicle {
+  id                 String               @id @default(uuid())
+  plateNumber        String               @unique
+  stationId          String
+  station            Organization         @relation(fields: [stationId], references: [id])
+  makeModel          String
+  vehicleType        String               // "Patrol Sedan", "4x4 Pickup", "Van"
+  status             StationVehicleStatus @default(AVAILABLE)
+  currentMileageKm   Int                  @default(0)
+  assignedOfficerId  String?
+  logs               VehicleLog[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@map("station_vehicles")
+}
+
+model VehicleLog {
+  id              String         @id @default(uuid())
+  vehicleId       String
+  vehicle         StationVehicle @relation(fields: [vehicleId], references: [id])
+  driverOfficerId String
+  departedAt      DateTime       @default(now())
+  returnedAt      DateTime?
+  destination     String
+  purpose         String
+  startMileageKm  Int
+  endMileageKm    Int?
+  fuelLitres      Float?
+
+  @@map("vehicle_logs")
+}
+
+model StationEquipment {
+  id           String                @id @default(uuid())
+  assetNumber  String                @unique
+  stationId    String
+  station      Organization          @relation(fields: [stationId], references: [id])
+  equipmentType String               // "Radio", "Bodycam", "Computer", "Body Armor"
+  serialNumber String                @unique
+  status       EquipmentStatus       @default(AVAILABLE)
+  assignments  EquipmentAssignment[]
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@map("station_equipment")
+}
+
+model EquipmentAssignment {
+  id            String           @id @default(uuid())
+  equipmentId   String
+  equipment     StationEquipment @relation(fields: [equipmentId], references: [id])
+  officerId     String
+  checkedOutAt  DateTime         @default(now())
+  checkedInAt   DateTime?
+  conditionNotes String?
+
+  @@map("equipment_assignments")
+}
+
+model StationVisitorLog {
+  id             String       @id @default(uuid())
+  visitorNumber  String       @unique
+  stationId      String
+  station        Organization @relation(fields: [stationId], references: [id])
+  visitorName    String
+  visitorIdType  String       // "NIN", "Drivers License", "Voter ID"
+  visitorIdValue String
+  purpose        String
+  hostOfficerId  String
+  arrivedAt      DateTime     @default(now())
+  departedAt     DateTime?
+  notes          String?
+
+  @@map("station_visitors")
+}
+
+model StationTask {
+  id                String       @id @default(uuid())
+  taskNumber        String       @unique
+  stationId         String
+  station           Organization @relation(fields: [stationId], references: [id])
+  title             String
+  description       String
+  priority          String       @default("MEDIUM")
+  assignedOfficerId String
+  supervisorId      String
+  dueDate           DateTime?
+  status            TaskStatus   @default(TODO)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("station_tasks")
+}
+
+model StationApprovalRequest {
+  id               String         @id @default(uuid())
+  requestNumber    String         @unique
+  stationId        String
+  station          Organization   @relation(fields: [stationId], references: [id])
+  requestType      String         // "CASE_REASSIGNMENT", "EVIDENCE_RELEASE", "SENSITIVE_RECORD_ACCESS"
+  requestingOfficerId String
+  approvingSupervisorId String?
+  details          String
+  status           ApprovalStatus @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("approval_requests")
 }
 
 model Officer {
@@ -102,24 +489,25 @@ model Officer {
 }
 
 model PersonMaster {
-  id              String              @id @default(uuid())
-  nin             String?             @unique
+  id              String               @id @default(uuid())
+  nin             String?              @unique
   firstName       String
   lastName        String
   middleName      String?
   aliases         String[]
   dateOfBirth     DateTime
   sex             String
-  nationality     String              @default("Nigerian")
+  nationality     String               @default("Nigerian")
   photoUrl        String?
   biometricRef    String?
-  classification  ClassificationLevel @default(LAW_ENFORCEMENT_RESTRICTED)
+  classification  ClassificationLevel  @default(LAW_ENFORCEMENT_RESTRICTED)
   incidents       IncidentPerson[]
   arrests         Arrest[]
   warrants        Warrant[]
   cases           CasePerson[]
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  custodyRecords  LocalCustodyRecord[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   @@map("persons")
 }
@@ -157,21 +545,22 @@ model IncidentPerson {
 }
 
 model Arrest {
-  id                 String       @id @default(uuid())
-  arrestNumber       String       @unique
+  id                 String               @id @default(uuid())
+  arrestNumber       String               @unique
   personId           String
-  person             PersonMaster @relation(fields: [personId], references: [id])
+  person             PersonMaster         @relation(fields: [personId], references: [id])
   incidentId         String?
   arrestingOfficerId String
   arrestedAt         DateTime
   location           String
   legalBasis         String
   charges            String[]
-  legalStatus        LegalStatus  @default(ARREST)
+  legalStatus        LegalStatus          @default(ARREST)
   bailStatus         String?
   custodyLocation    String
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  custodyRecords     LocalCustodyRecord[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   @@map("arrests")
 }
