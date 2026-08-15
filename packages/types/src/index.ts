@@ -117,6 +117,28 @@ export enum WarrantStatus {
   SUSPENDED = "SUSPENDED"
 }
 
+export enum EvidenceCategory {
+  BODYCAM_FOOTAGE = "BODYCAM_FOOTAGE",
+  DASHCAM_FOOTAGE = "DASHCAM_FOOTAGE",
+  PHOTOGRAPH = "PHOTOGRAPH",
+  AUDIO_RECORDING = "AUDIO_RECORDING",
+  FORENSIC_DOCUMENT = "FORENSIC_DOCUMENT",
+  PHYSICAL_ASSET_PHOTO = "PHYSICAL_ASSET_PHOTO"
+}
+
+export enum EvidenceCustodyAction {
+  INTAKE = "INTAKE",
+  TRANSFER_TO_LAB = "TRANSFER_TO_LAB",
+  CHECKOUT_COURT = "CHECKOUT_COURT",
+  RETURN_TO_VAULT = "RETURN_TO_VAULT",
+  SEAL_EVIDENCE = "SEAL_EVIDENCE"
+}
+
+export enum EvidenceHashVerificationStatus {
+  VERIFIED_INTACT = "VERIFIED_INTACT",
+  TAMPER_ALERT = "TAMPER_ALERT"
+}
+
 export enum WantedRiskLevel {
   EXTREMELY_DANGEROUS = "EXTREMELY_DANGEROUS",
   ARMED_AND_DANGEROUS = "ARMED_AND_DANGEROUS",
@@ -265,6 +287,38 @@ export interface WantedPersonRecord {
   publicCircular: boolean;
   status: WantedStatus;
   remarks: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChainOfCustodyLogEntry {
+  id: string;
+  performedByOfficerId: string;
+  action: EvidenceCustodyAction;
+  recipientOrLocation: string;
+  rationale: string;
+  timestamp: string;
+  hashVerificationStatus: EvidenceHashVerificationStatus;
+}
+
+export interface DigitalEvidenceRecord {
+  id: string;
+  evidenceNumber: string;
+  title: string;
+  category: EvidenceCategory;
+  fileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  storageUrl: string;
+  sha256Hash: string;
+  classification: ClassificationLevel;
+  incidentId?: string;
+  caseId?: string;
+  personId?: string;
+  seizingOfficerId: string;
+  seizedLocation: string;
+  seizedAt: string;
+  chainOfCustody: ChainOfCustodyLogEntry[];
   createdAt: string;
   updatedAt: string;
 }
