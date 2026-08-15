@@ -20,6 +20,7 @@ import { InterAgencyModule } from './inter-agency/inter-agency.module';
 import { PublicServicesModule } from './public-services/public-services.module';
 import { CadModule } from './cad/cad.module';
 import { SecurityModule } from './security/security.module';
+import { DisasterRecoveryModule } from './disaster-recovery/disaster-recovery.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SecurityModule } from './security/security.module';
     PublicServicesModule,
     CadModule,
     SecurityModule,
+    DisasterRecoveryModule,
   ],
   controllers: [HealthController],
   providers: [],

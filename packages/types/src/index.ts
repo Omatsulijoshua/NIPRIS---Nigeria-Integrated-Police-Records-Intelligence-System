@@ -453,6 +453,33 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface DbSnapshotRecord {
+  id: string;
+  snapshotId: string; // e.g. "SNAP-2026-NIPRIS-00912"
+  sizeBytes: number;
+  sha256Checksum: string;
+  encryptionAlgorithm: "AES-256-GCM";
+  offsiteRegion: string;
+  createdAt: string;
+}
+
+export interface FailoverSimulationResult {
+  simulatedFailureNode: string; // "PRIMARY_DB_AZ1"
+  promotedReplicaNode: string; // "STANDBY_REPLICA_AZ2"
+  failoverDurationSeconds: number; // 12 seconds
+  dataLossBytes: number; // 0 bytes
+  status: "SUCCESSFUL_FAILOVER";
+  timestamp: string;
+}
+
+export interface OfflineQueueReplayResult {
+  totalQueuedTransactions: number;
+  replayedCount: number;
+  deduplicatedCount: number;
+  status: "QUEUE_REPLAY_COMPLETE";
+  replayedAt: string;
+}
+
 export interface FieldEncryptionResult {
   algorithm: "AES-256-GCM";
   encryptedCiphertext: string;
