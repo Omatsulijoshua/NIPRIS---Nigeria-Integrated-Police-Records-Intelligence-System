@@ -15,6 +15,7 @@ import { IntelligenceModule } from './intelligence/intelligence.module';
 import { AuditModule } from './audit/audit.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { CourtsModule } from './courts/courts.module';
+import { CustodyModule } from './custody/custody.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CourtsModule } from './courts/courts.module';
     AuditModule,
     AnalyticsModule,
     CourtsModule,
+    CustodyModule,
   ],
   controllers: [HealthController],
   providers: [],

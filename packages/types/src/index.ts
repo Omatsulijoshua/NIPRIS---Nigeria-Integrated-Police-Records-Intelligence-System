@@ -95,6 +95,26 @@ export enum BailStatus {
   BAIL_REVOKED = "BAIL_REVOKED"
 }
 
+export enum RemandStatus {
+  REMAND_PENDING_TRIAL = "REMAND_PENDING_TRIAL",
+  SERVING_SENTENCE = "SERVING_SENTENCE",
+  RELEASED_ON_BAIL = "RELEASED_ON_BAIL",
+  SENTENCE_EXPIRED = "SENTENCE_EXPIRED"
+}
+
+export enum InmateMovementType {
+  COURT_APPEARANCE = "COURT_APPEARANCE",
+  MEDICAL_TRANSFER = "MEDICAL_TRANSFER",
+  INTER_FACILITY_TRANSIT = "INTER_FACILITY_TRANSIT",
+  RELEASE = "RELEASE"
+}
+
+export enum CellCapacityStatus {
+  NORMAL = "NORMAL",
+  NEAR_CAPACITY = "NEAR_CAPACITY",
+  OVERCROWDED_ALERT = "OVERCROWDED_ALERT"
+}
+
 export enum CaseStatus {
   OPEN = "OPEN",
   UNDER_INVESTIGATION = "UNDER_INVESTIGATION",
@@ -384,10 +404,51 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface CustodyTransferRecord {
+  id: string;
+  transferNumber: string; // e.g. "TRF-2026-NCOS-00812"
+  inmatePersonId: string;
+  inmateName: string;
+  originatingStation: string;
+  targetNcosFacility: string;
+  remandWarrantNumber: string;
+  transferringOfficerId: string;
+  receivingNcosOfficerId: string;
+  remandStatus: RemandStatus;
+  transferredAt: string;
+  createdAt: string;
+}
+
+export interface CellCapacityRecord {
+  facilityId: string;
+  facilityName: string;
+  state: string;
+  designCapacity: number;
+  currentOccupancy: number;
+  occupancyPercentage: number;
+  capacityStatus: CellCapacityStatus;
+  overcrowdingAlertTriggered: boolean;
+  lastUpdated: string;
+}
+
+export interface InmateMovementLogEntry {
+  id: string;
+  inmatePersonId: string;
+  inmateName: string;
+  movementType: InmateMovementType;
+  fromLocation: string;
+  toLocation: string;
+  escortOfficerId: string;
+  transportVehicleSerial: string;
+  departureTime: string;
+  arrivalTime?: string;
+  status: "IN_TRANSIT" | "COMPLETED";
+}
+
 export interface ChargeSheetRecord {
   id: string;
-  chargeSheetNumber: string; // e.g. "CS-2026-EDO-00912"
-  formNPF14Code: string; // Form NPF 14 Prosecution Filing
+  chargeSheetNumber: string;
+  formNPF14Code: string;
   caseId: string;
   arrestId: string;
   suspectPersonId: string;
@@ -414,7 +475,7 @@ export interface JudicialOrderRecord {
   targetCaseId: string;
   targetArrestId?: string;
   summaryText: string;
-  isJudiciallyLocked: boolean; // Locks case against administrative edits
+  isJudiciallyLocked: boolean;
   effectiveDate: string;
   createdAt: string;
 }
