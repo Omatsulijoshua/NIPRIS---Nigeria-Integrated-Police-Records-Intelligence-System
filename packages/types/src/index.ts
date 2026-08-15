@@ -95,6 +95,20 @@ export enum BailStatus {
   BAIL_REVOKED = "BAIL_REVOKED"
 }
 
+export enum PccStatus {
+  APPLICATION_SUBMITTED = "APPLICATION_SUBMITTED",
+  BIOMETRIC_VERIFICATION_PENDING = "BIOMETRIC_VERIFICATION_PENDING",
+  BACKGROUND_CHECK_IN_PROGRESS = "BACKGROUND_CHECK_IN_PROGRESS",
+  CERTIFICATE_ISSUED = "CERTIFICATE_ISSUED",
+  REJECTED = "REJECTED"
+}
+
+export enum StolenVehicleStatus {
+  NOT_REPORTED_STOLEN = "NOT_REPORTED_STOLEN",
+  STOLEN_VEHICLE_ALERT = "STOLEN_VEHICLE_ALERT",
+  RECOVERED = "RECOVERED"
+}
+
 export enum RemandStatus {
   REMAND_PENDING_TRIAL = "REMAND_PENDING_TRIAL",
   SERVING_SENTENCE = "SERVING_SENTENCE",
@@ -415,6 +429,51 @@ export interface IdentityResolutionResult {
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface PublicCrimeTipRecord {
+  id: string;
+  tipReferenceNumber: string; // e.g. "TIP-2026-EDO-99120"
+  isAnonymous: boolean;
+  reporterNin?: string;
+  reporterName?: string;
+  reporterPhone?: string;
+  category: string;
+  narrative: string;
+  locationName: string;
+  state: string;
+  latitude?: number;
+  longitude?: number;
+  mediaAttachmentUrls: string[];
+  submittedAt: string;
+}
+
+export interface PccApplicationRecord {
+  id: string;
+  trackingNumber: string; // e.g. "PCC-2026-NPF-00912"
+  formNPF11Code: string;
+  applicantNin: string;
+  applicantName: string;
+  email: string;
+  phoneNumber: string;
+  purpose: string;
+  status: PccStatus;
+  hasCriminalRecord: boolean;
+  certificateHash?: string;
+  qrVerificationUrl?: string;
+  appliedAt: string;
+  updatedAt: string;
+}
+
+export interface StolenVehicleLookupResult {
+  queryIdentifier: string;
+  status: StolenVehicleStatus;
+  makeModel?: string;
+  color?: string;
+  reportedStolenDate?: string;
+  stolenLocation?: string;
+  reportingStation?: string;
+  instructions: string;
 }
 
 export interface NimcNinVerificationResult {
