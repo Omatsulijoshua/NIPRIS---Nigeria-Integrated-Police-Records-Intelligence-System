@@ -81,6 +81,20 @@ export enum IncidentPersonRole {
   REPORTER = "REPORTER"
 }
 
+export enum CustodyStatus {
+  IN_CUSTODY = "IN_CUSTODY",
+  BAIL_GRANTED = "BAIL_GRANTED",
+  PROSECUTED = "PROSECUTED",
+  RELEASED = "RELEASED"
+}
+
+export enum BailStatus {
+  NOT_APPLICABLE = "NOT_APPLICABLE",
+  BAIL_PENDING = "BAIL_PENDING",
+  BAIL_GRANTED = "BAIL_GRANTED",
+  BAIL_REVOKED = "BAIL_REVOKED"
+}
+
 export enum LegalStatus {
   ARREST = "ARREST",
   CHARGE = "CHARGE",
@@ -182,6 +196,29 @@ export interface IdentityResolutionResult {
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface ArrestRecord {
+  id: string;
+  arrestNumber: string;
+  personId: string;
+  personName: string;
+  incidentId?: string;
+  arrestingOfficerId: string;
+  arrestingStationId: string;
+  state: string;
+  arrestedAt: string;
+  location: string;
+  legalBasis: string;
+  charges: string[];
+  custodyStatus: CustodyStatus;
+  bailStatus: BailStatus;
+  legalStatus: LegalStatus;
+  custodyLocation: string;
+  releaseDate?: string;
+  caseReference?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface IncidentPersonLink {
