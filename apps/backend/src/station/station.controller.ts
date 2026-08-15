@@ -26,9 +26,13 @@ import { DisposeEvidenceDto } from './dto/dispose-evidence.dto';
 import { CheckoutBodycamDto } from './dto/checkout-bodycam.dto';
 import { DockBodycamUploadDto } from './dto/dock-bodycam-upload.dto';
 import { AssignUnmatchedFootageDto } from './dto/assign-unmatched-footage.dto';
+import { CreateStationVehicleDto } from './dto/create-station-vehicle.dto';
+import { DispatchVehicleLogDto } from './dto/dispatch-vehicle-log.dto';
+import { CheckoutEquipmentDto } from './dto/checkout-equipment.dto';
+import { ReportMaintenanceDefectDto } from './dto/report-maintenance-defect.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases, Evidence & Bodycam Operations Subsystem')
+@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases, Evidence, Bodycam, Vehicles & Equipment Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -140,85 +144,110 @@ export class StationController {
     };
   }
 
-  @Post('bodycam/checkout')
-  @ApiOperation({ summary: 'Check Out Bodycam Device for Shift' })
-  async checkoutBodycamDevice(@Body() dto: CheckoutBodycamDto) {
-    const device = await this.stationService.checkoutBodycamDevice(dto);
+  @Post('vehicles')
+  @ApiOperation({ summary: 'Register New Station Fleet Vehicle' })
+  async createStationVehicle(@Body() dto: CreateStationVehicleDto) {
+    const vehicle = await this.stationService.createStationVehicle(dto);
     return {
       success: true,
-      message: `Bodycam Device ${dto.deviceCode} checked out to Officer ${dto.officerId}.`,
-      data: device,
+      message: `Vehicle ${vehicle.plateNumber} (${vehicle.callSign}) registered to station fleet.`,
+      data: vehicle,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('bodycam/devices/:stationId')
-  @ApiOperation({ summary: 'List Station Bodycam Devices & Status' })
-  async getStationBodycams(@Param('stationId') stationId: string) {
-    const devices = await this.stationService.getStationBodycams(stationId);
+  @Get('vehicles/:stationId')
+  @ApiOperation({ summary: 'List Station Fleet Vehicles & Operational Status' })
+  async getStationVehicles(@Param('stationId') stationId: string) {
+    const vehicles = await this.stationService.getStationVehicles(stationId);
     return {
       success: true,
-      count: devices.length,
-      data: devices,
+      count: vehicles.length,
+      data: vehicles,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('bodycam/dock-upload')
-  @ApiOperation({ summary: 'Dock Bodycam Device & Trigger Automated Video Upload' })
-  async dockBodycamUpload(@Body() dto: DockBodycamUploadDto) {
-    const upload = await this.stationService.dockBodycamUpload(dto);
+  @Post('vehicles/dispatch-log')
+  @ApiOperation({ summary: 'Log Patrol Vehicle Dispatch / Return Mileage & Fuel' })
+  async dispatchVehicleLog(@Body() dto: DispatchVehicleLogDto) {
+    const log = await this.stationService.dispatchVehicleLog(dto);
     return {
       success: true,
-      message: `Bodycam ${dto.deviceCode} docked at ${dto.dockId}. ${dto.durationMinutes} mins video uploaded.`,
-      data: upload,
+      message: `Vehicle Dispatch / Mileage Log updated cleanly.`,
+      data: log,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('bodycam/dock-queue/:stationId')
-  @ApiOperation({ summary: 'List Station Docking Auto-Upload Queue' })
-  async getDockUploadQueue(@Param('stationId') stationId: string) {
-    const queue = await this.stationService.getDockUploadQueue(stationId);
+  @Get('vehicles/logs/:vehicleId')
+  @ApiOperation({ summary: 'Get Mileage & Patrol History Logs for Vehicle' })
+  async getVehicleLogs(@Param('vehicleId') vehicleId: string) {
+    const logs = await this.stationService.getVehicleLogs(vehicleId);
     return {
       success: true,
-      count: queue.length,
-      data: queue,
+      count: logs.length,
+      data: logs,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('bodycam/unmatched/assign')
-  @ApiOperation({ summary: 'Link Unassigned Bodycam Footage to Officer / Incident / Case' })
-  async assignUnmatchedFootage(@Body() dto: AssignUnmatchedFootageDto) {
-    const upload = await this.stationService.assignUnmatchedFootage(dto);
+  @Post('equipment/checkout')
+  @ApiOperation({ summary: 'Sign Out Armory Equipment / Weapon to Officer' })
+  async checkoutEquipment(@Body() dto: CheckoutEquipmentDto) {
+    const item = await this.stationService.checkoutEquipment(dto);
     return {
       success: true,
-      message: `Unmatched Footage ${dto.footageId} linked to Officer ${dto.officerId}.`,
-      data: upload,
+      message: `Equipment ${item.equipmentCode} issued to Officer ${dto.officerId}.`,
+      data: item,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('bodycam/unmatched/:stationId')
-  @ApiOperation({ summary: 'List Unassigned / Unmatched Bodycam Footage Queue' })
-  async getUnmatchedFootageQueue(@Param('stationId') stationId: string) {
-    const queue = await this.stationService.getUnmatchedFootageQueue(stationId);
+  @Post('equipment/return')
+  @ApiOperation({ summary: 'Return Issued Equipment / Weapon to Station Armory' })
+  async returnEquipment(@Body('equipmentId') equipmentId: string, @Body('stationId') stationId: string) {
+    const item = await this.stationService.returnEquipment(equipmentId, stationId);
     return {
       success: true,
-      count: queue.length,
-      data: queue,
+      message: `Equipment ${item.equipmentCode} returned to Armory.`,
+      data: item,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('bodycam/compliance/:stationId')
-  @ApiOperation({ summary: 'Get Station Bodycam Compliance & Undocked Alerts Report' })
-  async getStationBodycamCompliance(@Param('stationId') stationId: string) {
-    const report = await this.stationService.getStationBodycamCompliance(stationId);
+  @Get('equipment/:stationId')
+  @ApiOperation({ summary: 'List Station Tactical Equipment & Armory Inventory' })
+  async getStationEquipment(@Param('stationId') stationId: string) {
+    const equipment = await this.stationService.getStationEquipment(stationId);
     return {
       success: true,
-      data: report,
+      count: equipment.length,
+      data: equipment,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('equipment/maintenance')
+  @ApiOperation({ summary: 'Report Vehicle / Equipment Defect for Maintenance' })
+  async reportMaintenanceDefect(@Body() dto: ReportMaintenanceDefectDto) {
+    const defect = await this.stationService.reportMaintenanceDefect(dto);
+    return {
+      success: true,
+      message: `Maintenance Defect Report created for ${dto.targetCategory} (${dto.targetId}).`,
+      data: defect,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('equipment/maintenance/:stationId')
+  @ApiOperation({ summary: 'List Station Maintenance Defect Alerts & Work Orders' })
+  async getMaintenanceAlerts(@Param('stationId') stationId: string) {
+    const defects = await this.stationService.getMaintenanceAlerts(stationId);
+    return {
+      success: true,
+      count: defects.length,
+      data: defects,
       timestamp: new Date().toISOString(),
     };
   }

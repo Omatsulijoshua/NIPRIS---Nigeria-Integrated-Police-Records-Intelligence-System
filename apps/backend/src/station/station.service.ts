@@ -24,6 +24,10 @@ import { DisposeEvidenceDto } from './dto/dispose-evidence.dto';
 import { CheckoutBodycamDto } from './dto/checkout-bodycam.dto';
 import { DockBodycamUploadDto } from './dto/dock-bodycam-upload.dto';
 import { AssignUnmatchedFootageDto } from './dto/assign-unmatched-footage.dto';
+import { CreateStationVehicleDto } from './dto/create-station-vehicle.dto';
+import { DispatchVehicleLogDto } from './dto/dispatch-vehicle-log.dto';
+import { CheckoutEquipmentDto } from './dto/checkout-equipment.dto';
+import { ReportMaintenanceDefectDto } from './dto/report-maintenance-defect.dto';
 import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -265,7 +269,7 @@ export interface StationEvidenceRecord {
 
 export interface StationBodycamDeviceRecord {
   id: string;
-  deviceCode: string; // BWC-NPF-EDO-001
+  deviceCode: string;
   stationId: string;
   serialNumber: string;
   batteryPercentage: number;
@@ -279,7 +283,7 @@ export interface StationBodycamDeviceRecord {
 
 export interface DockUploadRecord {
   id: string;
-  dockId: string; // DOCK-STN001-01
+  dockId: string;
   stationId: string;
   deviceCode: string;
   durationMinutes: number;
@@ -290,6 +294,61 @@ export interface DockUploadRecord {
   caseId?: string;
   isMatched: boolean;
   uploadedAt: string;
+}
+
+export interface StationVehicleRecord {
+  id: string;
+  stationId: string;
+  plateNumber: string; // NPF-EDO-001
+  callSign: string; // PATROL-ALPHA
+  makeModel: string;
+  odometerKm: number;
+  fuelLevelPercentage: number;
+  status: 'AVAILABLE' | 'PATROL' | 'MAINTENANCE' | 'DECOMMISSIONED';
+  assignedDriverId?: string;
+  assignedDriverName?: string;
+  createdAt: string;
+}
+
+export interface VehicleDispatchLogRecord {
+  id: string;
+  vehicleId: string;
+  plateNumber: string;
+  driverOfficerId: string;
+  driverOfficerName: string;
+  missionDescription: string;
+  departureTimestamp: string;
+  departureKm: number;
+  returnTimestamp?: string;
+  arrivalKm?: number;
+  distanceTraveledKm?: number;
+  fuelLiters?: number;
+}
+
+export interface StationEquipmentRecord {
+  id: string;
+  equipmentCode: string; // EQP-AK47-001
+  stationId: string;
+  category: 'FIREARM' | 'BODY_ARMOR' | 'RADIO_HANDSET' | 'TEAR_GAS' | 'TACTICAL_KIT';
+  name: string;
+  serialNumber: string;
+  status: 'IN_ARMORY' | 'ISSUED' | 'MAINTENANCE';
+  ammoRoundsIssued?: number;
+  assignedOfficerId?: string;
+  assignedOfficerName?: string;
+  issuedAt?: string;
+}
+
+export interface MaintenanceDefectRecord {
+  id: string;
+  stationId: string;
+  targetId: string;
+  targetCategory: string;
+  defectNarrative: string;
+  reportingOfficerId: string;
+  reportingOfficerName: string;
+  status: 'OPEN' | 'IN_REPAIR' | 'RESOLVED';
+  reportedAt: string;
 }
 
 @Injectable()
@@ -312,6 +371,10 @@ export class StationService {
   private readonly stationEvidenceStore = new Map<string, StationEvidenceRecord[]>();
   private readonly bodycamDevicesStore = new Map<string, StationBodycamDeviceRecord[]>();
   private readonly dockUploadStore = new Map<string, DockUploadRecord[]>();
+  private readonly vehiclesStore = new Map<string, StationVehicleRecord[]>();
+  private readonly vehicleLogsStore = new Map<string, VehicleDispatchLogRecord[]>();
+  private readonly equipmentStore = new Map<string, StationEquipmentRecord[]>();
+  private readonly defectsStore = new Map<string, MaintenanceDefectRecord[]>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -339,20 +402,19 @@ export class StationService {
     };
     this.profilesStore.set(stationId, profile);
 
-    // Seed Bodycams
-    const bodycams: StationBodycamDeviceRecord[] = [
-      { id: 'bwc_001', deviceCode: 'BWC-NPF-EDO-001', stationId, serialNumber: 'SN-BWC-881920', batteryPercentage: 94, storageCapacityGb: 128, status: 'CHECKED_OUT', assignedOfficerId: 'off_patrol_001', assignedOfficerName: 'Sgt Monday Usifo', assignedShiftId: 'sft_eve_01' },
-      { id: 'bwc_002', deviceCode: 'BWC-NPF-EDO-002', stationId, serialNumber: 'SN-BWC-881921', batteryPercentage: 100, storageCapacityGb: 128, status: 'DOCKED', lastDockTimestamp: new Date().toISOString() },
-      { id: 'bwc_003', deviceCode: 'BWC-NPF-EDO-003', stationId, serialNumber: 'SN-BWC-881922', batteryPercentage: 45, storageCapacityGb: 128, status: 'UPLOADING', assignedOfficerId: 'off_desk_001', assignedOfficerName: 'Insp Grace Enagbare' },
+    // Seed Vehicles
+    const vehicles: StationVehicleRecord[] = [
+      { id: 'veh_001', stationId, plateNumber: 'NPF-EDO-001', callSign: 'PATROL-ALPHA', makeModel: 'Toyota Hilux 4x4 Patrol Van', odometerKm: 14250, fuelLevelPercentage: 85, status: 'AVAILABLE', createdAt: new Date().toISOString() },
+      { id: 'veh_002', stationId, plateNumber: 'NPF-EDO-002', callSign: 'PATROL-BRAVO', makeModel: 'Innoson G80 Armored Tactical', odometerKm: 28900, fuelLevelPercentage: 60, status: 'PATROL', assignedDriverId: 'off_patrol_001', assignedDriverName: 'Sgt Monday Usifo', createdAt: new Date().toISOString() },
     ];
-    this.bodycamDevicesStore.set(stationId, bodycams);
+    this.vehiclesStore.set(stationId, vehicles);
 
-    // Seed Dock Uploads
-    const uploads: DockUploadRecord[] = [
-      { id: 'ftg_001', dockId: 'DOCK-STN001-01', stationId, deviceCode: 'BWC-NPF-EDO-001', durationMinutes: 45, sha256Hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', uploadStatus: 'COMPLETED', officerId: 'off_patrol_001', incidentId: 'INC-2026-EDO-00912', isMatched: true, uploadedAt: new Date(Date.now() - 60 * 60000).toISOString() },
-      { id: 'ftg_unmatched_001', dockId: 'DOCK-STN001-02', stationId, deviceCode: 'BWC-NPF-EDO-004', durationMinutes: 20, sha256Hash: 'f4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afb', uploadStatus: 'COMPLETED', isMatched: false, uploadedAt: new Date(Date.now() - 15 * 60000).toISOString() },
+    // Seed Equipment
+    const equipment: StationEquipmentRecord[] = [
+      { id: 'eqp_001', equipmentCode: 'EQP-AK47-001', stationId, category: 'FIREARM', name: 'AK-47 Assault Rifle 7.62mm', serialNumber: 'AK-NPF-88912', status: 'IN_ARMORY' },
+      { id: 'eqp_002', equipmentCode: 'EQP-ARMOR-001', stationId, category: 'BODY_ARMOR', name: 'Tactical Kevlar Vest Level III', serialNumber: 'ARM-NPF-44120', status: 'ISSUED', assignedOfficerId: 'off_patrol_001', assignedOfficerName: 'Sgt Monday Usifo' },
     ];
-    this.dockUploadStore.set(stationId, uploads);
+    this.equipmentStore.set(stationId, equipment);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -1122,7 +1184,6 @@ export class StationService {
     existing.unshift(record);
     this.dockUploadStore.set(dto.stationId, existing);
 
-    // Update bodycam status to DOCKED
     const devices = this.bodycamDevicesStore.get(dto.stationId) || [];
     const matchDevice = devices.find((d) => d.deviceCode === dto.deviceCode);
     if (matchDevice) {
@@ -1130,7 +1191,6 @@ export class StationService {
       matchDevice.lastDockTimestamp = now;
     }
 
-    // Log Station Diary entry
     await this.createDiaryEntry({
       stationId: dto.stationId,
       officerId: dto.officerId || 'SYS_DOCK',
@@ -1183,5 +1243,162 @@ export class StationService {
       powerOffAlertsCount: 0,
       unmatchedFootageCount: uploads.filter((u) => !u.isMatched).length,
     };
+  }
+
+  // --- VEHICLES & EQUIPMENT MANAGEMENT SUBSYSTEM ---
+
+  async createStationVehicle(dto: CreateStationVehicleDto): Promise<StationVehicleRecord> {
+    const record: StationVehicleRecord = {
+      id: `veh_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      stationId: dto.stationId,
+      plateNumber: dto.plateNumber,
+      callSign: dto.callSign,
+      makeModel: dto.makeModel,
+      odometerKm: dto.odometerKm,
+      fuelLevelPercentage: 100,
+      status: (dto.status as any) || 'AVAILABLE',
+      createdAt: new Date().toISOString(),
+    };
+
+    const existing = this.vehiclesStore.get(dto.stationId) || [];
+    existing.push(record);
+    this.vehiclesStore.set(dto.stationId, existing);
+
+    this.logger.log(`Created Station Fleet Vehicle ${dto.plateNumber} (Callsign: ${dto.callSign})`);
+    return record;
+  }
+
+  async getStationVehicles(stationId: string): Promise<StationVehicleRecord[]> {
+    return this.vehiclesStore.get(stationId) || [];
+  }
+
+  async dispatchVehicleLog(dto: DispatchVehicleLogDto): Promise<VehicleDispatchLogRecord> {
+    for (const [, vehicles] of this.vehiclesStore.entries()) {
+      const match = vehicles.find((v) => v.id === dto.vehicleId || v.plateNumber === dto.vehicleId);
+      if (match) {
+        const now = new Date().toISOString();
+
+        if (dto.arrivalKm) {
+          // Return log
+          const distance = dto.arrivalKm - dto.departureKm;
+          match.status = 'AVAILABLE';
+          match.odometerKm = dto.arrivalKm;
+          match.assignedDriverId = undefined;
+          match.assignedDriverName = undefined;
+
+          const logs = this.vehicleLogsStore.get(match.id) || [];
+          const activeLog = logs.find((l) => !l.returnTimestamp);
+          if (activeLog) {
+            activeLog.returnTimestamp = now;
+            activeLog.arrivalKm = dto.arrivalKm;
+            activeLog.distanceTraveledKm = distance;
+            activeLog.fuelLiters = dto.fuelLiters;
+            this.logger.log(`Vehicle ${match.plateNumber} returned from dispatch (${distance} km traveled)`);
+            return activeLog;
+          }
+        } else {
+          // Dispatch log
+          match.status = 'PATROL';
+          match.assignedDriverId = dto.driverOfficerId;
+          match.assignedDriverName = 'Sgt Monday Usifo';
+
+          const record: VehicleDispatchLogRecord = {
+            id: `vlog_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+            vehicleId: match.id,
+            plateNumber: match.plateNumber,
+            driverOfficerId: dto.driverOfficerId,
+            driverOfficerName: 'Sgt Monday Usifo',
+            missionDescription: dto.missionDescription,
+            departureTimestamp: now,
+            departureKm: dto.departureKm,
+          };
+
+          const existing = this.vehicleLogsStore.get(match.id) || [];
+          existing.unshift(record);
+          this.vehicleLogsStore.set(match.id, existing);
+
+          await this.createDiaryEntry({
+            stationId: match.stationId,
+            officerId: dto.driverOfficerId,
+            eventType: 'VEHICLE_DISPATCH',
+            description: `Patrol Vehicle ${match.plateNumber} dispatched for ${dto.missionDescription}. Departure Mileage: ${dto.departureKm} km.`,
+          });
+
+          this.logger.log(`Dispatched Vehicle ${match.plateNumber} to Driver ${dto.driverOfficerId}`);
+          return record;
+        }
+      }
+    }
+    throw new NotFoundException(`Vehicle ${dto.vehicleId} not found`);
+  }
+
+  async getVehicleLogs(vehicleId: string): Promise<VehicleDispatchLogRecord[]> {
+    return this.vehicleLogsStore.get(vehicleId) || [];
+  }
+
+  async checkoutEquipment(dto: CheckoutEquipmentDto): Promise<StationEquipmentRecord> {
+    const items = this.equipmentStore.get(dto.stationId) || [];
+    const match = items.find((e) => e.id === dto.equipmentId || e.equipmentCode === dto.equipmentId);
+    if (match) {
+      match.status = 'ISSUED';
+      match.assignedOfficerId = dto.officerId;
+      match.assignedOfficerName = 'Sgt Monday Usifo';
+      match.ammoRoundsIssued = dto.ammoRoundsIssued;
+      match.issuedAt = new Date().toISOString();
+
+      await this.createDiaryEntry({
+        stationId: dto.stationId,
+        officerId: dto.officerId,
+        eventType: 'ARMORY_ISSUE',
+        description: `Tactical Equipment ${match.equipmentCode} (${match.name}) issued to Officer ${dto.officerId}. Authorized by Armorer ${dto.authorizingArmorerId}.`,
+      });
+
+      this.logger.log(`Issued Tactical Equipment ${match.equipmentCode} to Officer ${dto.officerId}`);
+      return match;
+    }
+    throw new NotFoundException(`Equipment ${dto.equipmentId} not found at station armory`);
+  }
+
+  async returnEquipment(equipmentId: string, stationId: string): Promise<StationEquipmentRecord> {
+    const items = this.equipmentStore.get(stationId) || [];
+    const match = items.find((e) => e.id === equipmentId || e.equipmentCode === equipmentId);
+    if (match) {
+      match.status = 'IN_ARMORY';
+      match.assignedOfficerId = undefined;
+      match.assignedOfficerName = undefined;
+      match.issuedAt = undefined;
+      this.logger.log(`Returned Tactical Equipment ${match.equipmentCode} to station armory`);
+      return match;
+    }
+    throw new NotFoundException(`Equipment ${equipmentId} not found`);
+  }
+
+  async getStationEquipment(stationId: string): Promise<StationEquipmentRecord[]> {
+    return this.equipmentStore.get(stationId) || [];
+  }
+
+  async reportMaintenanceDefect(dto: ReportMaintenanceDefectDto): Promise<MaintenanceDefectRecord> {
+    const record: MaintenanceDefectRecord = {
+      id: `def_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      stationId: dto.stationId,
+      targetId: dto.targetId,
+      targetCategory: dto.targetCategory,
+      defectNarrative: dto.defectNarrative,
+      reportingOfficerId: dto.reportingOfficerId,
+      reportingOfficerName: 'Sgt Monday Usifo',
+      status: 'OPEN',
+      reportedAt: new Date().toISOString(),
+    };
+
+    const existing = this.defectsStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.defectsStore.set(dto.stationId, existing);
+
+    this.logger.log(`Reported Maintenance Defect for ${dto.targetCategory} (${dto.targetId}): ${dto.defectNarrative}`);
+    return record;
+  }
+
+  async getMaintenanceAlerts(stationId: string): Promise<MaintenanceDefectRecord[]> {
+    return this.defectsStore.get(stationId) || [];
   }
 }
