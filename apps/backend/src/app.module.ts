@@ -21,6 +21,7 @@ import { PublicServicesModule } from './public-services/public-services.module';
 import { CadModule } from './cad/cad.module';
 import { SecurityModule } from './security/security.module';
 import { DisasterRecoveryModule } from './disaster-recovery/disaster-recovery.module';
+import { StationModule } from './station/station.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { DisasterRecoveryModule } from './disaster-recovery/disaster-recovery.mo
     CadModule,
     SecurityModule,
     DisasterRecoveryModule,
+    StationModule,
   ],
   controllers: [HealthController],
   providers: [],

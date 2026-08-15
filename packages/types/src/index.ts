@@ -22,7 +22,9 @@ export enum OfficerRole {
   AUDITOR = "AUDITOR",                               // Level 11
   INTERNAL_AFFAIRS = "INTERNAL_AFFAIRS",             // Level 12
   COURT_INTEGRATION = "COURT_INTEGRATION",           // Level 13
-  READ_ONLY_VIEWER = "READ_ONLY_VIEWER"              // Level 14
+  READ_ONLY_VIEWER = "READ_ONLY_VIEWER",             // Level 14
+  STATION_ADMIN = "STATION_ADMIN",                   // Station Admin
+  DESK_OFFICER = "DESK_OFFICER"                      // Desk Officer
 }
 
 export enum OfficerRank {
