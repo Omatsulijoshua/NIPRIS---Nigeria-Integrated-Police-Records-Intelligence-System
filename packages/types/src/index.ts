@@ -152,6 +152,29 @@ export enum HotspotSeverity {
   CRITICAL = "CRITICAL"
 }
 
+export enum JudicialOrderType {
+  BAIL_ORDER = "BAIL_ORDER",
+  JUDICIAL_INJUNCTION = "JUDICIAL_INJUNCTION",
+  STAY_OF_PROCEEDINGS = "STAY_OF_PROCEEDINGS",
+  CONVICTION_ORDER = "CONVICTION_ORDER",
+  ACQUITTAL_ORDER = "ACQUITTAL_ORDER",
+  DISMISSAL_ORDER = "DISMISSAL_ORDER"
+}
+
+export enum TrialStatus {
+  PENDING_PROSECUTION = "PENDING_PROSECUTION",
+  TRIAL_IN_PROGRESS = "TRIAL_IN_PROGRESS",
+  CONVICTION = "CONVICTION",
+  ACQUITTAL = "ACQUITTAL",
+  DISMISSED = "DISMISSED"
+}
+
+export enum JudicialSealStatus {
+  VALID_SEAL = "VALID_SEAL",
+  INVALID_SEAL_SIGNATURE = "INVALID_SEAL_SIGNATURE",
+  EXPIRED_JUDICIAL_SEAL = "EXPIRED_JUDICIAL_SEAL"
+}
+
 export enum DeviceType {
   BODY_WORN_CAMERA = "BODY_WORN_CAMERA",
   DASHCAM = "DASHCAM"
@@ -361,6 +384,50 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface ChargeSheetRecord {
+  id: string;
+  chargeSheetNumber: string; // e.g. "CS-2026-EDO-00912"
+  formNPF14Code: string; // Form NPF 14 Prosecution Filing
+  caseId: string;
+  arrestId: string;
+  suspectPersonId: string;
+  suspectName: string;
+  courtName: string;
+  jurisdictionState: string;
+  prosecutingOfficerId: string;
+  statutoryCounts: Array<{ countNumber: number; penalCodeSection: string; offenseTitle: string; particularsOfOffense: string }>;
+  evidenceHashesLinked: string[];
+  courtSealNumber: string;
+  trialStatus: TrialStatus;
+  isJudiciallyLocked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface JudicialOrderRecord {
+  id: string;
+  orderNumber: string;
+  orderType: JudicialOrderType;
+  issuingJudgeName: string;
+  courtName: string;
+  courtSealNumber: string;
+  targetCaseId: string;
+  targetArrestId?: string;
+  summaryText: string;
+  isJudiciallyLocked: boolean; // Locks case against administrative edits
+  effectiveDate: string;
+  createdAt: string;
+}
+
+export interface JudicialSealVerificationResult {
+  courtSealNumber: string;
+  sealStatus: JudicialSealStatus;
+  issuingJudgeName: string;
+  courtName: string;
+  jurisdictionState: string;
+  verifiedAt: string;
+}
+
 export interface BiometricMatchCandidate {
   personId: string;
   personName: string;
@@ -373,7 +440,7 @@ export interface BiometricMatchResult {
   searchId: string;
   algorithmVersion: string;
   candidates: BiometricMatchCandidate[];
-  requiresHumanVerification: true; // Mandatory Safety Rule
+  requiresHumanVerification: true;
   humanVerificationStatus: BiometricVerificationStatus;
   humanVerifierOfficerId?: string;
   verifiedAt?: string;
