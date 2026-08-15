@@ -115,6 +115,19 @@ export enum CellCapacityStatus {
   OVERCROWDED_ALERT = "OVERCROWDED_ALERT"
 }
 
+export enum AgencyGateway {
+  NIMC = "NIMC",
+  FRSC = "FRSC",
+  INEC = "INEC",
+  NIS = "NIS"
+}
+
+export enum AgencyVerificationStatus {
+  VERIFIED_MATCH = "VERIFIED_MATCH",
+  RECORD_NOT_FOUND = "RECORD_NOT_FOUND",
+  SUSPECTED_FRAUD_FLAG = "SUSPECTED_FRAUD_FLAG"
+}
+
 export enum CaseStatus {
   OPEN = "OPEN",
   UNDER_INVESTIGATION = "UNDER_INVESTIGATION",
@@ -404,9 +417,53 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface NimcNinVerificationResult {
+  nin: string;
+  verificationStatus: AgencyVerificationStatus;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  photoUrl?: string;
+  biometricReference: string;
+  verifiedAt: string;
+}
+
+export interface FrscVerificationResult {
+  licenseOrVinNumber: string;
+  verificationStatus: AgencyVerificationStatus;
+  driverName?: string;
+  vehicleMakeModel?: string;
+  plateNumber?: string;
+  expiryDate: string;
+  verifiedAt: string;
+}
+
+export interface InecVoterIdVerificationResult {
+  voterVin: string;
+  verificationStatus: AgencyVerificationStatus;
+  voterName: string;
+  pollingUnit: string;
+  state: string;
+  lga: string;
+  verifiedAt: string;
+}
+
+export interface NisPassportVerificationResult {
+  passportNumber: string;
+  verificationStatus: AgencyVerificationStatus;
+  holderName: string;
+  nationality: string;
+  expiryDate: string;
+  borderWatchlistClearance: "CLEARED" | "WATCHLIST_ALERT";
+  verifiedAt: string;
+}
+
 export interface CustodyTransferRecord {
   id: string;
-  transferNumber: string; // e.g. "TRF-2026-NCOS-00812"
+  transferNumber: string;
   inmatePersonId: string;
   inmateName: string;
   originatingStation: string;

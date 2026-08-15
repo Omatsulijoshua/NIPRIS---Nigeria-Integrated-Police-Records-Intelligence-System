@@ -16,6 +16,7 @@ import { AuditModule } from './audit/audit.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { CourtsModule } from './courts/courts.module';
 import { CustodyModule } from './custody/custody.module';
+import { InterAgencyModule } from './inter-agency/inter-agency.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { CustodyModule } from './custody/custody.module';
     AnalyticsModule,
     CourtsModule,
     CustodyModule,
+    InterAgencyModule,
   ],
   controllers: [HealthController],
   providers: [],
