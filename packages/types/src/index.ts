@@ -57,6 +57,30 @@ export const NIGERIAN_STATES = [
   "Sokoto", "Taraba", "Yobe", "Zamfara", "FCT"
 ];
 
+export enum IncidentStatus {
+  REPORTED = "REPORTED",
+  DISPATCHED = "DISPATCHED",
+  RESPONDING = "RESPONDING",
+  ON_SCENE = "ON_SCENE",
+  UNDER_INVESTIGATION = "UNDER_INVESTIGATION",
+  CLOSED = "CLOSED",
+  REOPENED = "REOPENED"
+}
+
+export enum IncidentPriority {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL"
+}
+
+export enum IncidentPersonRole {
+  SUSPECT = "SUSPECT",
+  VICTIM = "VICTIM",
+  WITNESS = "WITNESS",
+  REPORTER = "REPORTER"
+}
+
 export enum LegalStatus {
   ARREST = "ARREST",
   CHARGE = "CHARGE",
@@ -153,11 +177,51 @@ export interface PersonMasterRecord {
 
 export interface IdentityResolutionResult {
   status: IdentityMatchStatus;
-  confidenceScore: number; // 0 to 100
+  confidenceScore: number;
   matchedPerson?: PersonMasterRecord;
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface IncidentPersonLink {
+  id: string;
+  personId: string;
+  personName: string;
+  roleInIncident: IncidentPersonRole;
+  notes?: string;
+}
+
+export interface IncidentTimelineEvent {
+  id: string;
+  action: string;
+  performedBy: string;
+  previousState?: string;
+  newState?: string;
+  timestamp: string;
+  details?: string;
+}
+
+export interface IncidentRecord {
+  id: string;
+  incidentNumber: string;
+  title: string;
+  description: string;
+  incidentType: string;
+  locationName: string;
+  latitude?: number;
+  longitude?: number;
+  occurredAt: string;
+  reportingOfficerId: string;
+  assignedOfficerIds: string[];
+  status: IncidentStatus;
+  priority: IncidentPriority;
+  classification: ClassificationLevel;
+  persons: IncidentPersonLink[];
+  timeline: IncidentTimelineEvent[];
+  reports: Array<{ id: string; officerId: string; reportText: string; timestamp: string }>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ApiResponse<T = any> {
