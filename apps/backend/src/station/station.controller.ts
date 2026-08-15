@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { StationService } from './station.service';
 import { CreateStationProfileDto } from './dto/create-station-profile.dto';
@@ -30,9 +30,13 @@ import { CreateStationVehicleDto } from './dto/create-station-vehicle.dto';
 import { DispatchVehicleLogDto } from './dto/dispatch-vehicle-log.dto';
 import { CheckoutEquipmentDto } from './dto/checkout-equipment.dto';
 import { ReportMaintenanceDefectDto } from './dto/report-maintenance-defect.dto';
+import { CreateStationVisitorDto } from './dto/create-station-visitor.dto';
+import { CreateStationTaskDto } from './dto/create-station-task.dto';
+import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
+import { SubmitShiftHandoverDto } from './dto/submit-shift-handover.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases, Evidence, Bodycam, Vehicles & Equipment Subsystem')
+@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases, Evidence, Bodycam, Vehicles, Equipment, Visitors, Tasks, Approvals & Shift Handover Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -144,110 +148,139 @@ export class StationController {
     };
   }
 
-  @Post('vehicles')
-  @ApiOperation({ summary: 'Register New Station Fleet Vehicle' })
-  async createStationVehicle(@Body() dto: CreateStationVehicleDto) {
-    const vehicle = await this.stationService.createStationVehicle(dto);
+  @Post('visitors')
+  @ApiOperation({ summary: 'Register Station Visitor & Detainee Visitation Log' })
+  async createStationVisitor(@Body() dto: CreateStationVisitorDto) {
+    const visitor = await this.stationService.createStationVisitor(dto);
     return {
       success: true,
-      message: `Vehicle ${vehicle.plateNumber} (${vehicle.callSign}) registered to station fleet.`,
-      data: vehicle,
+      message: `Visitor ${visitor.visitorNumber} (${visitor.visitorName}) checked in.`,
+      data: visitor,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('vehicles/:stationId')
-  @ApiOperation({ summary: 'List Station Fleet Vehicles & Operational Status' })
-  async getStationVehicles(@Param('stationId') stationId: string) {
-    const vehicles = await this.stationService.getStationVehicles(stationId);
+  @Post('visitors/checkout')
+  @ApiOperation({ summary: 'Log Visitor Departure / Check-Out' })
+  async checkoutVisitor(@Body('visitorId') visitorId: string, @Body('stationId') stationId: string) {
+    const visitor = await this.stationService.checkoutVisitor(visitorId, stationId);
     return {
       success: true,
-      count: vehicles.length,
-      data: vehicles,
+      message: `Visitor ${visitor.visitorNumber} checked out cleanly.`,
+      data: visitor,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('vehicles/dispatch-log')
-  @ApiOperation({ summary: 'Log Patrol Vehicle Dispatch / Return Mileage & Fuel' })
-  async dispatchVehicleLog(@Body() dto: DispatchVehicleLogDto) {
-    const log = await this.stationService.dispatchVehicleLog(dto);
+  @Get('visitors/:stationId')
+  @ApiOperation({ summary: 'List Station Visitor Log Records' })
+  async getStationVisitors(@Param('stationId') stationId: string) {
+    const visitors = await this.stationService.getStationVisitors(stationId);
     return {
       success: true,
-      message: `Vehicle Dispatch / Mileage Log updated cleanly.`,
-      data: log,
+      count: visitors.length,
+      data: visitors,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('vehicles/logs/:vehicleId')
-  @ApiOperation({ summary: 'Get Mileage & Patrol History Logs for Vehicle' })
-  async getVehicleLogs(@Param('vehicleId') vehicleId: string) {
-    const logs = await this.stationService.getVehicleLogs(vehicleId);
+  @Post('tasks')
+  @ApiOperation({ summary: 'Delegate & Create Internal Station Work Task' })
+  async createStationTask(@Body() dto: CreateStationTaskDto) {
+    const task = await this.stationService.createStationTask(dto);
     return {
       success: true,
-      count: logs.length,
-      data: logs,
+      message: `Station Task ${task.taskNumber} created & assigned.`,
+      data: task,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('equipment/checkout')
-  @ApiOperation({ summary: 'Sign Out Armory Equipment / Weapon to Officer' })
-  async checkoutEquipment(@Body() dto: CheckoutEquipmentDto) {
-    const item = await this.stationService.checkoutEquipment(dto);
+  @Patch('tasks/:taskId')
+  @ApiOperation({ summary: 'Update Task Status (TODO, IN_PROGRESS, BLOCKED, COMPLETED)' })
+  async updateTaskStatus(@Param('taskId') taskId: string, @Body('status') status: any) {
+    const task = await this.stationService.updateTaskStatus(taskId, status);
     return {
       success: true,
-      message: `Equipment ${item.equipmentCode} issued to Officer ${dto.officerId}.`,
-      data: item,
+      message: `Task ${task.taskNumber} status updated to ${status}.`,
+      data: task,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('equipment/return')
-  @ApiOperation({ summary: 'Return Issued Equipment / Weapon to Station Armory' })
-  async returnEquipment(@Body('equipmentId') equipmentId: string, @Body('stationId') stationId: string) {
-    const item = await this.stationService.returnEquipment(equipmentId, stationId);
+  @Get('tasks/:stationId')
+  @ApiOperation({ summary: 'List Internal Station Assigned Work Tasks' })
+  async getStationTasks(@Param('stationId') stationId: string) {
+    const tasks = await this.stationService.getStationTasks(stationId);
     return {
       success: true,
-      message: `Equipment ${item.equipmentCode} returned to Armory.`,
-      data: item,
+      count: tasks.length,
+      data: tasks,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('equipment/:stationId')
-  @ApiOperation({ summary: 'List Station Tactical Equipment & Armory Inventory' })
-  async getStationEquipment(@Param('stationId') stationId: string) {
-    const equipment = await this.stationService.getStationEquipment(stationId);
+  @Post('approvals')
+  @ApiOperation({ summary: 'Submit Administrative Approval Request' })
+  async createApprovalRequest(@Body() dto: CreateApprovalRequestDto) {
+    const request = await this.stationService.createApprovalRequest(dto);
     return {
       success: true,
-      count: equipment.length,
-      data: equipment,
+      message: `Approval Request ${request.requestNumber} submitted.`,
+      data: request,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('equipment/maintenance')
-  @ApiOperation({ summary: 'Report Vehicle / Equipment Defect for Maintenance' })
-  async reportMaintenanceDefect(@Body() dto: ReportMaintenanceDefectDto) {
-    const defect = await this.stationService.reportMaintenanceDefect(dto);
+  @Post('approvals/action')
+  @ApiOperation({ summary: 'Approve or Reject Administrative Approval Request' })
+  async actionApprovalRequest(
+    @Body('requestId') requestId: string,
+    @Body('action') action: 'APPROVED' | 'REJECTED',
+    @Body('actionedByOfficerId') actionedByOfficerId: string,
+    @Body('notes') notes?: string,
+  ) {
+    const request = await this.stationService.actionApprovalRequest(requestId, action, actionedByOfficerId, notes);
     return {
       success: true,
-      message: `Maintenance Defect Report created for ${dto.targetCategory} (${dto.targetId}).`,
-      data: defect,
+      message: `Approval Request ${request.requestNumber} actioned: ${action}.`,
+      data: request,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('equipment/maintenance/:stationId')
-  @ApiOperation({ summary: 'List Station Maintenance Defect Alerts & Work Orders' })
-  async getMaintenanceAlerts(@Param('stationId') stationId: string) {
-    const defects = await this.stationService.getMaintenanceAlerts(stationId);
+  @Get('approvals/:stationId')
+  @ApiOperation({ summary: 'List Station Administrative Approval Requests' })
+  async getApprovalRequests(@Param('stationId') stationId: string) {
+    const requests = await this.stationService.getApprovalRequests(stationId);
     return {
       success: true,
-      count: defects.length,
-      data: defects,
+      count: requests.length,
+      data: requests,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Post('handover')
+  @ApiOperation({ summary: 'Submit Watch Commander End-of-Shift Handover Report' })
+  async submitShiftHandover(@Body() dto: SubmitShiftHandoverDto) {
+    const handover = await this.stationService.submitShiftHandover(dto);
+    return {
+      success: true,
+      message: `Watch Commander Shift Handover ${handover.handoverNumber} submitted & signed cleanly.`,
+      data: handover,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('handover/:stationId')
+  @ApiOperation({ summary: 'List Watch Commander Shift Handover Log Reports' })
+  async getShiftHandovers(@Param('stationId') stationId: string) {
+    const handovers = await this.stationService.getShiftHandovers(stationId);
+    return {
+      success: true,
+      count: handovers.length,
+      data: handovers,
       timestamp: new Date().toISOString(),
     };
   }

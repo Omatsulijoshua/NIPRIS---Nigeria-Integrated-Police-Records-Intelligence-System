@@ -28,6 +28,10 @@ import { CreateStationVehicleDto } from './dto/create-station-vehicle.dto';
 import { DispatchVehicleLogDto } from './dto/dispatch-vehicle-log.dto';
 import { CheckoutEquipmentDto } from './dto/checkout-equipment.dto';
 import { ReportMaintenanceDefectDto } from './dto/report-maintenance-defect.dto';
+import { CreateStationVisitorDto } from './dto/create-station-visitor.dto';
+import { CreateStationTaskDto } from './dto/create-station-task.dto';
+import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
+import { SubmitShiftHandoverDto } from './dto/submit-shift-handover.dto';
 import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -299,8 +303,8 @@ export interface DockUploadRecord {
 export interface StationVehicleRecord {
   id: string;
   stationId: string;
-  plateNumber: string; // NPF-EDO-001
-  callSign: string; // PATROL-ALPHA
+  plateNumber: string;
+  callSign: string;
   makeModel: string;
   odometerKm: number;
   fuelLevelPercentage: number;
@@ -327,7 +331,7 @@ export interface VehicleDispatchLogRecord {
 
 export interface StationEquipmentRecord {
   id: string;
-  equipmentCode: string; // EQP-AK47-001
+  equipmentCode: string;
   stationId: string;
   category: 'FIREARM' | 'BODY_ARMOR' | 'RADIO_HANDSET' | 'TEAR_GAS' | 'TACTICAL_KIT';
   name: string;
@@ -349,6 +353,66 @@ export interface MaintenanceDefectRecord {
   reportingOfficerName: string;
   status: 'OPEN' | 'IN_REPAIR' | 'RESOLVED';
   reportedAt: string;
+}
+
+export interface StationVisitorRecord {
+  id: string;
+  visitorNumber: string; // VST-2026-STN001-00912
+  stationId: string;
+  visitorName: string;
+  identificationRef: string;
+  visitReason: string;
+  targetDetaineeId?: string;
+  badgeNumber: string;
+  securityCleared: boolean;
+  checkInTimestamp: string;
+  checkOutTimestamp?: string;
+  createdAt: string;
+}
+
+export interface StationTaskRecord {
+  id: string;
+  taskNumber: string; // TASK-2026-STN001-001
+  stationId: string;
+  title: string;
+  description: string;
+  assignedOfficerId: string;
+  assignedOfficerName: string;
+  priority: string;
+  status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
+  dueDate?: string;
+  createdAt: string;
+}
+
+export interface StationApprovalRequestRecord {
+  id: string;
+  requestNumber: string; // APP-2026-STN001-001
+  stationId: string;
+  requestCategory: string;
+  justification: string;
+  requestingOfficerId: string;
+  requestingOfficerName: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  actionedByOfficerId?: string;
+  actionedAt?: string;
+  actionNotes?: string;
+  createdAt: string;
+}
+
+export interface WatchCommanderHandoverRecord {
+  id: string;
+  handoverNumber: string; // HND-2026-STN001-001
+  stationId: string;
+  outgoingShiftId: string;
+  outgoingCommanderId: string;
+  outgoingCommanderName: string;
+  incomingCommanderId: string;
+  incomingCommanderName: string;
+  detaineesCount: number;
+  openIncidentsCount: number;
+  handoverNotes: string;
+  pendingIncidentRefs: string[];
+  signedAt: string;
 }
 
 @Injectable()
@@ -375,6 +439,10 @@ export class StationService {
   private readonly vehicleLogsStore = new Map<string, VehicleDispatchLogRecord[]>();
   private readonly equipmentStore = new Map<string, StationEquipmentRecord[]>();
   private readonly defectsStore = new Map<string, MaintenanceDefectRecord[]>();
+  private readonly visitorsStore = new Map<string, StationVisitorRecord[]>();
+  private readonly tasksStore = new Map<string, StationTaskRecord[]>();
+  private readonly approvalRequestsStore = new Map<string, StationApprovalRequestRecord[]>();
+  private readonly handoversStore = new Map<string, WatchCommanderHandoverRecord[]>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -402,19 +470,11 @@ export class StationService {
     };
     this.profilesStore.set(stationId, profile);
 
-    // Seed Vehicles
-    const vehicles: StationVehicleRecord[] = [
-      { id: 'veh_001', stationId, plateNumber: 'NPF-EDO-001', callSign: 'PATROL-ALPHA', makeModel: 'Toyota Hilux 4x4 Patrol Van', odometerKm: 14250, fuelLevelPercentage: 85, status: 'AVAILABLE', createdAt: new Date().toISOString() },
-      { id: 'veh_002', stationId, plateNumber: 'NPF-EDO-002', callSign: 'PATROL-BRAVO', makeModel: 'Innoson G80 Armored Tactical', odometerKm: 28900, fuelLevelPercentage: 60, status: 'PATROL', assignedDriverId: 'off_patrol_001', assignedDriverName: 'Sgt Monday Usifo', createdAt: new Date().toISOString() },
+    // Seed Visitors
+    const visitors: StationVisitorRecord[] = [
+      { id: 'vst_001', visitorNumber: 'VST-2026-STN001-00912', stationId, visitorName: 'Barrister Nnamdi Kanu', identificationRef: 'NIN-99201920192', visitReason: 'LEGAL_COUNSEL', targetDetaineeId: 'per_edo_suspect_01', badgeNumber: 'BDG-045', securityCleared: true, checkInTimestamp: new Date(Date.now() - 30 * 60000).toISOString(), createdAt: new Date().toISOString() },
     ];
-    this.vehiclesStore.set(stationId, vehicles);
-
-    // Seed Equipment
-    const equipment: StationEquipmentRecord[] = [
-      { id: 'eqp_001', equipmentCode: 'EQP-AK47-001', stationId, category: 'FIREARM', name: 'AK-47 Assault Rifle 7.62mm', serialNumber: 'AK-NPF-88912', status: 'IN_ARMORY' },
-      { id: 'eqp_002', equipmentCode: 'EQP-ARMOR-001', stationId, category: 'BODY_ARMOR', name: 'Tactical Kevlar Vest Level III', serialNumber: 'ARM-NPF-44120', status: 'ISSUED', assignedOfficerId: 'off_patrol_001', assignedOfficerName: 'Sgt Monday Usifo' },
-    ];
-    this.equipmentStore.set(stationId, equipment);
+    this.visitorsStore.set(stationId, visitors);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -1279,7 +1339,6 @@ export class StationService {
         const now = new Date().toISOString();
 
         if (dto.arrivalKm) {
-          // Return log
           const distance = dto.arrivalKm - dto.departureKm;
           match.status = 'AVAILABLE';
           match.odometerKm = dto.arrivalKm;
@@ -1297,7 +1356,6 @@ export class StationService {
             return activeLog;
           }
         } else {
-          // Dispatch log
           match.status = 'PATROL';
           match.assignedDriverId = dto.driverOfficerId;
           match.assignedDriverName = 'Sgt Monday Usifo';
@@ -1400,5 +1458,179 @@ export class StationService {
 
   async getMaintenanceAlerts(stationId: string): Promise<MaintenanceDefectRecord[]> {
     return this.defectsStore.get(stationId) || [];
+  }
+
+  // --- VISITORS, TASKS & APPROVAL WORKFLOWS SUBSYSTEM ---
+
+  async createStationVisitor(dto: CreateStationVisitorDto): Promise<StationVisitorRecord> {
+    const visitorNumber = `VST-2026-STN001-${Math.floor(10000 + Math.random() * 90000)}`;
+    const now = new Date().toISOString();
+
+    const record: StationVisitorRecord = {
+      id: `vst_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      visitorNumber,
+      stationId: dto.stationId,
+      visitorName: dto.visitorName,
+      identificationRef: dto.identificationRef,
+      visitReason: dto.visitReason,
+      targetDetaineeId: dto.targetDetaineeId,
+      badgeNumber: dto.badgeNumber,
+      securityCleared: dto.securityCleared !== undefined ? dto.securityCleared : true,
+      checkInTimestamp: now,
+      createdAt: now,
+    };
+
+    const existing = this.visitorsStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.visitorsStore.set(dto.stationId, existing);
+
+    await this.createDiaryEntry({
+      stationId: dto.stationId,
+      officerId: 'OFF_DESK_ENTRY',
+      eventType: 'VISITOR_CHECKIN',
+      description: `Visitor ${dto.visitorName} (${dto.visitReason}) checked in under Badge ${dto.badgeNumber}.`,
+    });
+
+    this.logger.log(`Created Visitor Record ${visitorNumber} for ${dto.visitorName}`);
+    return record;
+  }
+
+  async checkoutVisitor(visitorId: string, stationId: string): Promise<StationVisitorRecord> {
+    const visitors = this.visitorsStore.get(stationId) || [];
+    const match = visitors.find((v) => v.id === visitorId || v.visitorNumber === visitorId);
+    if (match) {
+      match.checkOutTimestamp = new Date().toISOString();
+      this.logger.log(`Checked out Visitor ${match.visitorNumber}`);
+      return match;
+    }
+    throw new NotFoundException(`Visitor ${visitorId} not found`);
+  }
+
+  async getStationVisitors(stationId: string): Promise<StationVisitorRecord[]> {
+    return this.visitorsStore.get(stationId) || [];
+  }
+
+  async createStationTask(dto: CreateStationTaskDto): Promise<StationTaskRecord> {
+    const taskNumber = `TASK-2026-STN001-${Math.floor(100 + Math.random() * 900)}`;
+    const now = new Date().toISOString();
+
+    const record: StationTaskRecord = {
+      id: `tsk_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      taskNumber,
+      stationId: dto.stationId,
+      title: dto.title,
+      description: dto.description,
+      assignedOfficerId: dto.assignedOfficerId,
+      assignedOfficerName: 'Sgt Monday Usifo',
+      priority: dto.priority,
+      status: 'TODO',
+      dueDate: dto.dueDate,
+      createdAt: now,
+    };
+
+    const existing = this.tasksStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.tasksStore.set(dto.stationId, existing);
+
+    this.logger.log(`Created Station Task ${taskNumber} (${dto.title}) for Officer ${dto.assignedOfficerId}`);
+    return record;
+  }
+
+  async updateTaskStatus(taskId: string, status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED'): Promise<StationTaskRecord> {
+    for (const [, tasks] of this.tasksStore.entries()) {
+      const match = tasks.find((t) => t.id === taskId || t.taskNumber === taskId);
+      if (match) {
+        match.status = status;
+        this.logger.log(`Updated Station Task ${match.taskNumber} status -> ${status}`);
+        return match;
+      }
+    }
+    throw new NotFoundException(`Station Task ${taskId} not found`);
+  }
+
+  async getStationTasks(stationId: string): Promise<StationTaskRecord[]> {
+    return this.tasksStore.get(stationId) || [];
+  }
+
+  async createApprovalRequest(dto: CreateApprovalRequestDto): Promise<StationApprovalRequestRecord> {
+    const requestNumber = `APP-2026-STN001-${Math.floor(100 + Math.random() * 900)}`;
+    const now = new Date().toISOString();
+
+    const record: StationApprovalRequestRecord = {
+      id: `app_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      requestNumber,
+      stationId: dto.stationId,
+      requestCategory: dto.requestCategory,
+      justification: dto.justification,
+      requestingOfficerId: dto.requestingOfficerId,
+      requestingOfficerName: 'Sgt Monday Usifo',
+      status: 'PENDING',
+      createdAt: now,
+    };
+
+    const existing = this.approvalRequestsStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.approvalRequestsStore.set(dto.stationId, existing);
+
+    this.logger.log(`Created Approval Request ${requestNumber} (${dto.requestCategory})`);
+    return record;
+  }
+
+  async actionApprovalRequest(requestId: string, action: 'APPROVED' | 'REJECTED', actionedByOfficerId: string, notes?: string): Promise<StationApprovalRequestRecord> {
+    for (const [, requests] of this.approvalRequestsStore.entries()) {
+      const match = requests.find((r) => r.id === requestId || r.requestNumber === requestId);
+      if (match) {
+        match.status = action;
+        match.actionedByOfficerId = actionedByOfficerId;
+        match.actionedAt = new Date().toISOString();
+        match.actionNotes = notes;
+        this.logger.log(`Actioned Approval Request ${match.requestNumber} -> ${action}`);
+        return match;
+      }
+    }
+    throw new NotFoundException(`Approval Request ${requestId} not found`);
+  }
+
+  async getApprovalRequests(stationId: string): Promise<StationApprovalRequestRecord[]> {
+    return this.approvalRequestsStore.get(stationId) || [];
+  }
+
+  async submitShiftHandover(dto: SubmitShiftHandoverDto): Promise<WatchCommanderHandoverRecord> {
+    const handoverNumber = `HND-2026-STN001-${Math.floor(100 + Math.random() * 900)}`;
+    const now = new Date().toISOString();
+
+    const record: WatchCommanderHandoverRecord = {
+      id: `hnd_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      handoverNumber,
+      stationId: dto.stationId,
+      outgoingShiftId: dto.outgoingShiftId,
+      outgoingCommanderId: dto.outgoingCommanderId,
+      outgoingCommanderName: 'CSP Ibrahim Danjuma',
+      incomingCommanderId: dto.incomingCommanderId,
+      incomingCommanderName: 'Insp Grace Enagbare',
+      detaineesCount: dto.detaineesCount,
+      openIncidentsCount: dto.openIncidentsCount,
+      handoverNotes: dto.handoverNotes,
+      pendingIncidentRefs: dto.pendingIncidentRefs || [],
+      signedAt: now,
+    };
+
+    const existing = this.handoversStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.handoversStore.set(dto.stationId, existing);
+
+    await this.createDiaryEntry({
+      stationId: dto.stationId,
+      officerId: dto.outgoingCommanderId,
+      eventType: 'SHIFT_HANDOVER',
+      description: `Watch Commander Shift Handover ${handoverNumber} submitted to Incoming Commander ${dto.incomingCommanderId}. ${dto.detaineesCount} detainees in cell.`,
+    });
+
+    this.logger.log(`Submitted Watch Commander Shift Handover Log ${handoverNumber}`);
+    return record;
+  }
+
+  async getShiftHandovers(stationId: string): Promise<WatchCommanderHandoverRecord[]> {
+    return this.handoversStore.get(stationId) || [];
   }
 }
