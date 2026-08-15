@@ -34,9 +34,10 @@ import { CreateStationVisitorDto } from './dto/create-station-visitor.dto';
 import { CreateStationTaskDto } from './dto/create-station-task.dto';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { SubmitShiftHandoverDto } from './dto/submit-shift-handover.dto';
+import { GenerateStationReportDto } from './dto/generate-station-report.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases, Evidence, Bodycam, Vehicles, Equipment, Visitors, Tasks, Approvals & Shift Handover Subsystem')
+@ApiTags('NIPRIS Station Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -124,163 +125,58 @@ export class StationController {
     };
   }
 
-  @Get('overview/activity-feed/:stationId')
-  @ApiOperation({ summary: 'Get Real-Time Station Operational Activity Feed' })
-  async getStationActivityFeed(@Param('stationId') stationId: string) {
-    const feed = await this.stationService.getStationActivityFeed(stationId);
+  @Get('reports/summary/:stationId')
+  @ApiOperation({ summary: 'Get Station Operational Summary Aggregation Report' })
+  async getStationSummaryReport(@Param('stationId') stationId: string, @Query('period') period?: string) {
+    const report = await this.stationService.getStationSummaryReport(stationId, period);
     return {
       success: true,
-      count: feed.length,
-      data: feed,
+      data: report,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('overview/alerts/:stationId')
-  @ApiOperation({ summary: 'Get Station High-Priority Operational Alerts' })
-  async getStationAlerts(@Param('stationId') stationId: string) {
-    const alerts = await this.stationService.getStationAlerts(stationId);
+  @Get('reports/crime-trends/:stationId')
+  @ApiOperation({ summary: 'Get Crime Trends & Sector Hotspot Distribution' })
+  async getStationCrimeTrends(@Param('stationId') stationId: string) {
+    const trends = await this.stationService.getStationCrimeTrends(stationId);
     return {
       success: true,
-      count: alerts.length,
-      data: alerts,
+      data: trends,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('visitors')
-  @ApiOperation({ summary: 'Register Station Visitor & Detainee Visitation Log' })
-  async createStationVisitor(@Body() dto: CreateStationVisitorDto) {
-    const visitor = await this.stationService.createStationVisitor(dto);
+  @Get('reports/officer-performance/:stationId')
+  @ApiOperation({ summary: 'Get Officer Workload & Performance Metrics' })
+  async getStationOfficerPerformance(@Param('stationId') stationId: string) {
+    const perf = await this.stationService.getStationOfficerPerformance(stationId);
     return {
       success: true,
-      message: `Visitor ${visitor.visitorNumber} (${visitor.visitorName}) checked in.`,
-      data: visitor,
+      data: perf,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('visitors/checkout')
-  @ApiOperation({ summary: 'Log Visitor Departure / Check-Out' })
-  async checkoutVisitor(@Body('visitorId') visitorId: string, @Body('stationId') stationId: string) {
-    const visitor = await this.stationService.checkoutVisitor(visitorId, stationId);
+  @Get('reports/detention-analytics/:stationId')
+  @ApiOperation({ summary: 'Get Detention Duration & 24h Constitutional Remand Analytics' })
+  async getStationDetentionAnalytics(@Param('stationId') stationId: string) {
+    const analytics = await this.stationService.getStationDetentionAnalytics(stationId);
     return {
       success: true,
-      message: `Visitor ${visitor.visitorNumber} checked out cleanly.`,
-      data: visitor,
+      data: analytics,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('visitors/:stationId')
-  @ApiOperation({ summary: 'List Station Visitor Log Records' })
-  async getStationVisitors(@Param('stationId') stationId: string) {
-    const visitors = await this.stationService.getStationVisitors(stationId);
+  @Post('reports/export')
+  @ApiOperation({ summary: 'Export Station Operational Summary Report in CSV/PDF format' })
+  async exportStationReport(@Body() dto: GenerateStationReportDto) {
+    const file = await this.stationService.exportStationReport(dto);
     return {
       success: true,
-      count: visitors.length,
-      data: visitors,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Post('tasks')
-  @ApiOperation({ summary: 'Delegate & Create Internal Station Work Task' })
-  async createStationTask(@Body() dto: CreateStationTaskDto) {
-    const task = await this.stationService.createStationTask(dto);
-    return {
-      success: true,
-      message: `Station Task ${task.taskNumber} created & assigned.`,
-      data: task,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Patch('tasks/:taskId')
-  @ApiOperation({ summary: 'Update Task Status (TODO, IN_PROGRESS, BLOCKED, COMPLETED)' })
-  async updateTaskStatus(@Param('taskId') taskId: string, @Body('status') status: any) {
-    const task = await this.stationService.updateTaskStatus(taskId, status);
-    return {
-      success: true,
-      message: `Task ${task.taskNumber} status updated to ${status}.`,
-      data: task,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Get('tasks/:stationId')
-  @ApiOperation({ summary: 'List Internal Station Assigned Work Tasks' })
-  async getStationTasks(@Param('stationId') stationId: string) {
-    const tasks = await this.stationService.getStationTasks(stationId);
-    return {
-      success: true,
-      count: tasks.length,
-      data: tasks,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Post('approvals')
-  @ApiOperation({ summary: 'Submit Administrative Approval Request' })
-  async createApprovalRequest(@Body() dto: CreateApprovalRequestDto) {
-    const request = await this.stationService.createApprovalRequest(dto);
-    return {
-      success: true,
-      message: `Approval Request ${request.requestNumber} submitted.`,
-      data: request,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Post('approvals/action')
-  @ApiOperation({ summary: 'Approve or Reject Administrative Approval Request' })
-  async actionApprovalRequest(
-    @Body('requestId') requestId: string,
-    @Body('action') action: 'APPROVED' | 'REJECTED',
-    @Body('actionedByOfficerId') actionedByOfficerId: string,
-    @Body('notes') notes?: string,
-  ) {
-    const request = await this.stationService.actionApprovalRequest(requestId, action, actionedByOfficerId, notes);
-    return {
-      success: true,
-      message: `Approval Request ${request.requestNumber} actioned: ${action}.`,
-      data: request,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Get('approvals/:stationId')
-  @ApiOperation({ summary: 'List Station Administrative Approval Requests' })
-  async getApprovalRequests(@Param('stationId') stationId: string) {
-    const requests = await this.stationService.getApprovalRequests(stationId);
-    return {
-      success: true,
-      count: requests.length,
-      data: requests,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Post('handover')
-  @ApiOperation({ summary: 'Submit Watch Commander End-of-Shift Handover Report' })
-  async submitShiftHandover(@Body() dto: SubmitShiftHandoverDto) {
-    const handover = await this.stationService.submitShiftHandover(dto);
-    return {
-      success: true,
-      message: `Watch Commander Shift Handover ${handover.handoverNumber} submitted & signed cleanly.`,
-      data: handover,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Get('handover/:stationId')
-  @ApiOperation({ summary: 'List Watch Commander Shift Handover Log Reports' })
-  async getShiftHandovers(@Param('stationId') stationId: string) {
-    const handovers = await this.stationService.getShiftHandovers(stationId);
-    return {
-      success: true,
-      count: handovers.length,
-      data: handovers,
+      message: `Report exported as ${file.filename}.`,
+      data: file,
       timestamp: new Date().toISOString(),
     };
   }

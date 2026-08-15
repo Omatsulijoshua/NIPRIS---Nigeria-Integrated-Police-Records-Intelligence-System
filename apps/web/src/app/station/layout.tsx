@@ -20,6 +20,7 @@ export default function StationLayout({ children }: { children: React.ReactNode 
     { label: '📹 Bodycam Ops', href: '/station/bodycam' },
     { label: '🚔 Vehicles & Armory', href: '/station/vehicles' },
     { label: '📋 Visitors & Tasks', href: '/station/visitors' },
+    { label: '📈 Reports & Analytics', href: '/station/reports' },
     { label: '👮 Officers Roster', href: '/station/officers' },
     { label: '⚙ Settings', href: '/station/settings' },
   ];

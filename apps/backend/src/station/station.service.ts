@@ -32,6 +32,7 @@ import { CreateStationVisitorDto } from './dto/create-station-visitor.dto';
 import { CreateStationTaskDto } from './dto/create-station-task.dto';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { SubmitShiftHandoverDto } from './dto/submit-shift-handover.dto';
+import { GenerateStationReportDto } from './dto/generate-station-report.dto';
 import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -357,7 +358,7 @@ export interface MaintenanceDefectRecord {
 
 export interface StationVisitorRecord {
   id: string;
-  visitorNumber: string; // VST-2026-STN001-00912
+  visitorNumber: string;
   stationId: string;
   visitorName: string;
   identificationRef: string;
@@ -372,7 +373,7 @@ export interface StationVisitorRecord {
 
 export interface StationTaskRecord {
   id: string;
-  taskNumber: string; // TASK-2026-STN001-001
+  taskNumber: string;
   stationId: string;
   title: string;
   description: string;
@@ -386,7 +387,7 @@ export interface StationTaskRecord {
 
 export interface StationApprovalRequestRecord {
   id: string;
-  requestNumber: string; // APP-2026-STN001-001
+  requestNumber: string;
   stationId: string;
   requestCategory: string;
   justification: string;
@@ -401,7 +402,7 @@ export interface StationApprovalRequestRecord {
 
 export interface WatchCommanderHandoverRecord {
   id: string;
-  handoverNumber: string; // HND-2026-STN001-001
+  handoverNumber: string;
   stationId: string;
   outgoingShiftId: string;
   outgoingCommanderId: string;
@@ -469,12 +470,6 @@ export class StationService {
       updatedAt: new Date().toISOString(),
     };
     this.profilesStore.set(stationId, profile);
-
-    // Seed Visitors
-    const visitors: StationVisitorRecord[] = [
-      { id: 'vst_001', visitorNumber: 'VST-2026-STN001-00912', stationId, visitorName: 'Barrister Nnamdi Kanu', identificationRef: 'NIN-99201920192', visitReason: 'LEGAL_COUNSEL', targetDetaineeId: 'per_edo_suspect_01', badgeNumber: 'BDG-045', securityCleared: true, checkInTimestamp: new Date(Date.now() - 30 * 60000).toISOString(), createdAt: new Date().toISOString() },
-    ];
-    this.visitorsStore.set(stationId, visitors);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -1632,5 +1627,71 @@ export class StationService {
 
   async getShiftHandovers(stationId: string): Promise<WatchCommanderHandoverRecord[]> {
     return this.handoversStore.get(stationId) || [];
+  }
+
+  // --- STATION REPORTING & ANALYTICS SUBSYSTEM ---
+
+  async getStationSummaryReport(stationId: string, period = 'MONTHLY') {
+    return {
+      stationId,
+      period,
+      generatedAt: new Date().toISOString(),
+      complaints: { total: 45, convertedToIncidents: 38, resolvedNoArrest: 7, conversionRatePercentage: 84.4 },
+      incidents: { total: 38, underInvestigation: 9, referredToCID: 4, closed: 25 },
+      arrests: { totalBooked: 42, remandedInCell: 36, releasedOnBail: 6 },
+      custody: { totalIntakes: 36, avgDetentionHours: 18.5, releasedWithin24hPercentage: 94.4, transferredToNCoS: 12 },
+      evidence: { totalItemsSealed: 87, checkedOutForCourt: 14, disposedDestructed: 3 },
+      prosecution: { chargeSheetsCompiled: 18, endorsedByCommander: 18, arraignedInCourt: 15 },
+    };
+  }
+
+  async getStationCrimeTrends(stationId: string) {
+    return {
+      stationId,
+      sectors: [
+        { sectorName: 'Ring Road Commercial Axis', incidentsCount: 18, primaryCrime: 'ARMED_ROBBERY' },
+        { sectorName: 'GRA Residential Zone', incidentsCount: 12, primaryCrime: 'BURGLARY' },
+        { sectorName: 'Sapele Road Transit Corridor', incidentsCount: 8, primaryCrime: 'TRAFFIC_THEFT' },
+      ],
+      categories: [
+        { category: 'ARMED_ROBBERY', count: 15, percentage: 39.5 },
+        { category: 'BURGLARY', count: 12, percentage: 31.5 },
+        { category: 'FELONY_THEFT', count: 7, percentage: 18.4 },
+        { category: 'ASSAULT', count: 4, percentage: 10.6 },
+      ],
+    };
+  }
+
+  async getStationOfficerPerformance(stationId: string) {
+    return {
+      stationId,
+      officers: [
+        { officerId: 'off_patrol_001', name: 'Sgt Monday Usifo', badge: 'NPF-66120', activeCases: 3, completedTasks: 18, diaryEntriesCount: 42, attendanceRatePercentage: 98 },
+        { officerId: 'off_cid_001', name: 'DSP Chidi Okonkwo', badge: 'NPF-77319', activeCases: 5, completedTasks: 24, diaryEntriesCount: 31, attendanceRatePercentage: 100 },
+        { officerId: 'off_desk_001', name: 'Insp Grace Enagbare', badge: 'NPF-94102', activeCases: 1, completedTasks: 15, diaryEntriesCount: 58, attendanceRatePercentage: 96 },
+      ],
+    };
+  }
+
+  async getStationDetentionAnalytics(stationId: string) {
+    return {
+      stationId,
+      totalDetainedThisMonth: 36,
+      avgDetentionDurationHours: 18.5,
+      complianceRate24h: 94.4,
+      overcrowdingEventsCount: 0,
+      remandBreachAlerts: 0,
+    };
+  }
+
+  async exportStationReport(dto: GenerateStationReportDto) {
+    const summary = await this.getStationSummaryReport(dto.stationId, dto.period);
+    const csvContent = `StationId,Period,TotalComplaints,ConvertedIncidents,TotalArrests,AvgDetentionHours,ConstitutionalComplianceRate\n${summary.stationId},${summary.period},${summary.complaints.total},${summary.complaints.convertedToIncidents},${summary.arrests.totalBooked},${summary.custody.avgDetentionHours},${summary.custody.releasedWithin24hPercentage}%`;
+
+    return {
+      filename: `Station_Report_${dto.stationId}_${dto.period}_${Date.now()}.csv`,
+      contentType: 'text/csv',
+      data: csvContent,
+    };
   }
 }
