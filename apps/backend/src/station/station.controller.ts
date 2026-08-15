@@ -6,7 +6,7 @@ import { CreateStationUnitDto } from './dto/create-station-unit.dto';
 import { AssignStationOfficerDto } from './dto/assign-station-officer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization & Unit Management Subsystem')
+@ApiTags('NIPRIS Station Organization & Command Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -79,6 +79,41 @@ export class StationController {
       success: true,
       count: officers.length,
       data: officers,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('overview/metrics/:stationId')
+  @ApiOperation({ summary: 'Get Real-Time Station Operational Metrics for TODAY' })
+  async getStationOverviewMetrics(@Param('stationId') stationId: string) {
+    const metrics = await this.stationService.getStationOverviewMetrics(stationId);
+    return {
+      success: true,
+      data: metrics,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('overview/activity-feed/:stationId')
+  @ApiOperation({ summary: 'Get Real-Time Station Operational Activity Feed' })
+  async getStationActivityFeed(@Param('stationId') stationId: string) {
+    const feed = await this.stationService.getStationActivityFeed(stationId);
+    return {
+      success: true,
+      count: feed.length,
+      data: feed,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('overview/alerts/:stationId')
+  @ApiOperation({ summary: 'Get Station High-Priority Operational Alerts' })
+  async getStationAlerts(@Param('stationId') stationId: string) {
+    const alerts = await this.stationService.getStationAlerts(stationId);
+    return {
+      success: true,
+      count: alerts.length,
+      data: alerts,
       timestamp: new Date().toISOString(),
     };
   }

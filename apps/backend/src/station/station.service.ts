@@ -42,6 +42,40 @@ export interface StationOfficerAssignment {
   assignedAt: string;
 }
 
+export interface StationOverviewMetrics {
+  stationId: string;
+  stationName: string;
+  todayDate: string;
+  officers: { onDuty: number; offDuty: number; onLeave: number; absent: number };
+  incidents: { reportedToday: number; open: number; underInvestigation: number; closed: number };
+  arrests: { today: number; thisWeek: number; thisMonth: number };
+  custody: { currentlyDetained: number; capacityLimit: number; overcrowdingAlert: boolean; releasedToday: number; pendingTransfer: number };
+  cases: { newCases: number; activeCases: number; pendingProsecution: number; closedCases: number };
+  evidence: { receivedToday: number; pendingProcessing: number; inStorage: number; transferred: number };
+  bodycams: { active: number; inactive: number; uploadPending: number; deviceError: number };
+  vehicles: { available: number; inUse: number; patrol: number; maintenance: number };
+  tasks: { todo: number; inProgress: number; blocked: number; completed: number };
+}
+
+export interface StationActivityItem {
+  id: string;
+  timestamp: string;
+  category: 'INCIDENT' | 'ARREST' | 'EVIDENCE' | 'BODYCAM' | 'CUSTODY' | 'CASE' | 'WARRANT';
+  title: string;
+  actorName: string;
+  actorBadge: string;
+  details: string;
+}
+
+export interface StationAlertItem {
+  id: string;
+  severity: 'HIGH' | 'CRITICAL' | 'WARNING';
+  category: string;
+  title: string;
+  description: string;
+  timestamp: string;
+}
+
 @Injectable()
 export class StationService {
   private readonly logger = new Logger(StationService.name);
@@ -122,7 +156,6 @@ export class StationService {
   async getStationProfile(stationId: string): Promise<StationProfileRecord> {
     const profile = this.profilesStore.get(stationId);
     if (!profile) {
-      // Fallback default
       return {
         id: `prof_${stationId}`,
         organizationId: stationId,
@@ -187,5 +220,43 @@ export class StationService {
 
   async getStationOfficers(stationId: string): Promise<StationOfficerAssignment[]> {
     return this.officerAssignmentsStore.get(stationId) || [];
+  }
+
+  // --- STATION DASHBOARD & COMMAND CENTER METRICS ---
+
+  async getStationOverviewMetrics(stationId: string): Promise<StationOverviewMetrics> {
+    const profile = await this.getStationProfile(stationId);
+    return {
+      stationId,
+      stationName: 'Benin Central Police Station',
+      todayDate: new Date().toISOString().split('T')[0],
+      officers: { onDuty: 14, offDuty: 8, onLeave: 2, absent: 0 },
+      incidents: { reportedToday: 5, open: 3, underInvestigation: 4, closed: 12 },
+      arrests: { today: 2, thisWeek: 11, thisMonth: 42 },
+      custody: { currentlyDetained: 12, capacityLimit: profile.holdingCellCapacity, overcrowdingAlert: false, releasedToday: 3, pendingTransfer: 2 },
+      cases: { newCases: 2, activeCases: 9, pendingProsecution: 3, closedCases: 28 },
+      evidence: { receivedToday: 4, pendingProcessing: 2, inStorage: 87, transferred: 5 },
+      bodycams: { active: 10, inactive: 4, uploadPending: 2, deviceError: 0 },
+      vehicles: { available: 4, inUse: 3, patrol: 2, maintenance: 1 },
+      tasks: { todo: 6, inProgress: 4, blocked: 1, completed: 18 },
+    };
+  }
+
+  async getStationActivityFeed(stationId: string): Promise<StationActivityItem[]> {
+    return [
+      { id: 'act_001', timestamp: new Date(Date.now() - 5 * 60000).toISOString(), category: 'INCIDENT', title: 'New Incident Reported (INC-2026-EDO-00912)', actorName: 'Insp Grace Enagbare', actorBadge: 'NPF-94102', details: 'Armed robbery complaint at Ring Road, Benin City.' },
+      { id: 'act_002', timestamp: new Date(Date.now() - 25 * 60000).toISOString(), category: 'ARREST', title: 'Arrest Record Created (ARR-2026-EDO-00912)', actorName: 'Sgt Monday Usifo', actorBadge: 'NPF-66120', details: 'Suspect booked for felony theft at Station Cell #2.' },
+      { id: 'act_003', timestamp: new Date(Date.now() - 45 * 60000).toISOString(), category: 'EVIDENCE', title: 'Evidence Intake Sealed (EVD-2026-EDO-00912)', actorName: 'DSP Chidi Okonkwo', actorBadge: 'NPF-77319', details: 'Physical asset photograph & knife intake logged.' },
+      { id: 'act_004', timestamp: new Date(Date.now() - 90 * 60000).toISOString(), category: 'BODYCAM', title: 'Bodycam Footage Uploaded (BWC-NPF-EDO-001)', actorName: 'Sgt Monday Usifo', actorBadge: 'NPF-66120', details: '45 mins shift footage uploaded to S3 evidence vault.' },
+      { id: 'act_005', timestamp: new Date(Date.now() - 120 * 60000).toISOString(), category: 'CUSTODY', title: 'Custody Transfer Initiated (TRF-2026-NCOS-00812)', actorName: 'CSP Ibrahim Danjuma', actorBadge: 'NPF-88201', details: 'Inmate transferred to NCoS Remand Facility.' },
+    ];
+  }
+
+  async getStationAlerts(stationId: string): Promise<StationAlertItem[]> {
+    return [
+      { id: 'alt_001', severity: 'HIGH', category: 'CUSTODY_DETENTION', title: 'Pending Remand Warrant Review', description: 'Inmate Osagie Efe custody detention review due within 2 hours.', timestamp: new Date().toISOString() },
+      { id: 'alt_002', severity: 'CRITICAL', category: 'WARRANT_ALERT', title: 'High-Risk Wanted Person Match', description: 'Facial recognition candidate match flagged for Wanted Circular WAR-2026-EDO-00912.', timestamp: new Date().toISOString() },
+      { id: 'alt_003', severity: 'WARNING', category: 'BODYCAM_COMPLIANCE', title: 'Bodycam Upload Pending', description: 'Device BWC-NPF-EDO-004 has 2 un-uploaded shift recordings.', timestamp: new Date().toISOString() },
+    ];
   }
 }
