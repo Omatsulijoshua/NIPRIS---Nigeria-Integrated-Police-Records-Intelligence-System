@@ -18,6 +18,7 @@ import { CourtsModule } from './courts/courts.module';
 import { CustodyModule } from './custody/custody.module';
 import { InterAgencyModule } from './inter-agency/inter-agency.module';
 import { PublicServicesModule } from './public-services/public-services.module';
+import { CadModule } from './cad/cad.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { PublicServicesModule } from './public-services/public-services.module';
     CustodyModule,
     InterAgencyModule,
     PublicServicesModule,
+    CadModule,
   ],
   controllers: [HealthController],
   providers: [],

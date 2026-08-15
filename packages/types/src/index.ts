@@ -74,6 +74,14 @@ export enum IncidentPriority {
   CRITICAL = "CRITICAL"
 }
 
+export enum CadDispatchStatus {
+  QUEUED_FOR_DISPATCH = "QUEUED_FOR_DISPATCH",
+  DISPATCHED = "DISPATCHED",
+  PATROL_EN_ROUTE = "PATROL_EN_ROUTE",
+  ON_SCENE = "ON_SCENE",
+  INCIDENT_RESOLVED = "INCIDENT_RESOLVED"
+}
+
 export enum IncidentPersonRole {
   SUSPECT = "SUSPECT",
   VICTIM = "VICTIM",
@@ -431,9 +439,49 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface PatrolUnitTelemetry {
+  unitId: string;
+  unitCallsign: string;
+  assignedOfficerId: string;
+  assignedOfficerName: string;
+  state: string;
+  dutyStatus: string; // 'ON_PATROL' | 'RESPONDING' | 'ON_SCENE' | 'SOS_EMERGENCY'
+  latitude: number;
+  longitude: number;
+  speedKmH: number;
+  lastTelemetryTimestamp: string;
+}
+
+export interface CadIncidentRecord {
+  id: string;
+  cadIncidentNumber: string; // e.g. "CAD-2026-EDO-00912"
+  title: string;
+  category: string;
+  priority: IncidentPriority;
+  locationName: string;
+  state: string;
+  latitude: number;
+  longitude: number;
+  status: CadDispatchStatus;
+  dispatchedUnitId?: string;
+  dispatchedUnitCallsign?: string;
+  dispatchedAt?: string;
+  reportedAt: string;
+  createdAt: string;
+}
+
+export interface RecommendedPatrolUnit {
+  unitId: string;
+  unitCallsign: string;
+  assignedOfficerName: string;
+  distanceKm: number;
+  dutyStatus: string;
+  estimatedArrivalMinutes: number;
+}
+
 export interface PublicCrimeTipRecord {
   id: string;
-  tipReferenceNumber: string; // e.g. "TIP-2026-EDO-99120"
+  tipReferenceNumber: string;
   isAnonymous: boolean;
   reporterNin?: string;
   reporterName?: string;
@@ -450,7 +498,7 @@ export interface PublicCrimeTipRecord {
 
 export interface PccApplicationRecord {
   id: string;
-  trackingNumber: string; // e.g. "PCC-2026-NPF-00912"
+  trackingNumber: string;
   formNPF11Code: string;
   applicantNin: string;
   applicantName: string;
