@@ -6,9 +6,10 @@ import { OfficersModule } from './officers/officers.module';
 import { PersonsModule } from './persons/persons.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { ArrestsModule } from './arrests/arrests.module';
+import { CasesModule } from './cases/cases.module';
 
 @Module({
-  imports: [AuthModule, OrganizationsModule, OfficersModule, PersonsModule, IncidentsModule, ArrestsModule],
+  imports: [AuthModule, OrganizationsModule, OfficersModule, PersonsModule, IncidentsModule, ArrestsModule, CasesModule],
   controllers: [HealthController],
   providers: [],
 })

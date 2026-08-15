@@ -95,6 +95,14 @@ export enum BailStatus {
   BAIL_REVOKED = "BAIL_REVOKED"
 }
 
+export enum CaseStatus {
+  OPEN = "OPEN",
+  UNDER_INVESTIGATION = "UNDER_INVESTIGATION",
+  PENDING_PROSECUTION = "PENDING_PROSECUTION",
+  CLOSED = "CLOSED",
+  REOPENED = "REOPENED"
+}
+
 export enum LegalStatus {
   ARREST = "ARREST",
   CHARGE = "CHARGE",
@@ -217,6 +225,35 @@ export interface ArrestRecord {
   custodyLocation: string;
   releaseDate?: string;
   caseReference?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CaseEvidenceLink {
+  id: string;
+  assetType: "EVIDENCE" | "BODYCAM" | "DASHCAM" | "PHOTO" | "DOCUMENT";
+  assetId: string;
+  title: string;
+  url?: string;
+  notes?: string;
+}
+
+export interface CaseRecord {
+  id: string;
+  caseNumber: string;
+  title: string;
+  description: string;
+  priority: IncidentPriority;
+  status: CaseStatus;
+  leadInvestigatorId: string;
+  teamOfficerIds: string[];
+  state: string;
+  classification: ClassificationLevel;
+  incidentIds: string[];
+  arrestIds: string[];
+  personIds: string[];
+  evidenceLinks: CaseEvidenceLink[];
+  timeline: Array<{ id: string; action: string; performedBy: string; timestamp: string; details?: string }>;
   createdAt: string;
   updatedAt: string;
 }
