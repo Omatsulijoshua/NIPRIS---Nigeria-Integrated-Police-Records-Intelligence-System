@@ -19,9 +19,13 @@ import { AssignStationCaseDto } from './dto/assign-station-case.dto';
 import { UpdateCaseChecklistDto } from './dto/update-case-checklist.dto';
 import { CompileProsecutionSheetDto } from './dto/compile-prosecution-sheet.dto';
 import { TransferStationCaseDto } from './dto/transfer-station-case.dto';
+import { CreateStorageLocationDto } from './dto/create-storage-location.dto';
+import { StationEvidenceIntakeDto } from './dto/station-evidence-intake.dto';
+import { CheckoutEvidenceDto } from './dto/checkout-evidence.dto';
+import { DisposeEvidenceDto } from './dto/dispose-evidence.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody & Case Operations Subsystem')
+@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases & Evidence Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -133,61 +137,73 @@ export class StationController {
     };
   }
 
-  @Post('cases/assign')
-  @ApiOperation({ summary: 'Assign Case to Lead Investigating Officer & Team' })
-  async assignStationCase(@Body() dto: AssignStationCaseDto) {
-    const caseRecord = await this.stationService.assignStationCase(dto);
+  @Post('evidence/storage-locations')
+  @ApiOperation({ summary: 'Define New Station Storage Location Layout' })
+  async createStorageLocation(@Body() dto: CreateStorageLocationDto) {
+    const location = await this.stationService.createStorageLocation(dto);
     return {
       success: true,
-      message: `Case ${caseRecord.caseNumber} assigned to Lead Officer ${dto.leadOfficerId}.`,
-      data: caseRecord,
+      message: `Storage Location Code ${location.code} created.`,
+      data: location,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('cases/workload/:officerId')
-  @ApiOperation({ summary: 'Get Investigating Officer Workload & Active Case Load Metrics' })
-  async getOfficerWorkload(@Param('officerId') officerId: string) {
-    const workload = await this.stationService.getOfficerWorkload(officerId);
+  @Get('evidence/storage-locations/:stationId')
+  @ApiOperation({ summary: 'List Station Storage Location Layout Bins' })
+  async getStorageLocations(@Param('stationId') stationId: string) {
+    const locations = await this.stationService.getStorageLocations(stationId);
     return {
       success: true,
-      data: workload,
+      count: locations.length,
+      data: locations,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('cases/checklist')
-  @ApiOperation({ summary: 'Update Case Investigation Milestones Checklist' })
-  async updateCaseChecklist(@Body() dto: UpdateCaseChecklistDto) {
-    const caseRecord = await this.stationService.updateCaseChecklist(dto);
+  @Post('evidence/intake')
+  @ApiOperation({ summary: 'Process Physical Evidence Intake & Barcode Tag Generation' })
+  async processStationEvidenceIntake(@Body() dto: StationEvidenceIntakeDto) {
+    const evidence = await this.stationService.processStationEvidenceIntake(dto);
     return {
       success: true,
-      message: `Checklist item ${dto.itemKey} updated cleanly.`,
-      data: caseRecord,
+      message: `Physical Evidence ${evidence.evidenceNumber} (${evidence.barcodeTag}) sealed into ${dto.storageLocationCode}.`,
+      data: evidence,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('cases/prosecution-sheet')
-  @ApiOperation({ summary: 'Compile & Endorse Police Prosecution Charge Sheet' })
-  async compileProsecutionSheet(@Body() dto: CompileProsecutionSheetDto) {
-    const caseRecord = await this.stationService.compileProsecutionSheet(dto);
+  @Post('evidence/checkout')
+  @ApiOperation({ summary: 'Check Out Evidence for Court Presentation or Forensic Lab' })
+  async checkoutEvidence(@Body() dto: CheckoutEvidenceDto) {
+    const evidence = await this.stationService.checkoutEvidence(dto);
     return {
       success: true,
-      message: `Police Prosecution Charge Sheet compiled and endorsed cleanly for ${caseRecord.caseNumber}.`,
-      data: caseRecord,
+      message: `Evidence ${evidence.evidenceNumber} checked out for ${dto.purpose}.`,
+      data: evidence,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('cases/transfer')
-  @ApiOperation({ summary: 'Transfer Case Inter-Station or to State CID / FCID' })
-  async transferStationCase(@Body() dto: TransferStationCaseDto) {
-    const caseRecord = await this.stationService.transferStationCase(dto);
+  @Post('evidence/dispose')
+  @ApiOperation({ summary: 'Dispose / Destruct / Court Release Evidence' })
+  async disposeEvidence(@Body() dto: DisposeEvidenceDto) {
+    const evidence = await this.stationService.disposeEvidence(dto);
     return {
       success: true,
-      message: `Case ${caseRecord.caseNumber} transferred to ${dto.targetLevel} (${dto.targetOrganizationId}).`,
-      data: caseRecord,
+      message: `Evidence ${evidence.evidenceNumber} disposed under ${dto.authorityReference}.`,
+      data: evidence,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('evidence/chain-of-custody/:evidenceId')
+  @ApiOperation({ summary: 'Get Full Chain of Custody & Audit Log for Evidence' })
+  async getChainOfCustody(@Param('evidenceId') evidenceId: string) {
+    const chain = await this.stationService.getChainOfCustody(evidenceId);
+    return {
+      success: true,
+      data: chain,
       timestamp: new Date().toISOString(),
     };
   }

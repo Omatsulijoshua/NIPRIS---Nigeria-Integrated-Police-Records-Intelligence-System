@@ -17,6 +17,10 @@ import { AssignStationCaseDto } from './dto/assign-station-case.dto';
 import { UpdateCaseChecklistDto } from './dto/update-case-checklist.dto';
 import { CompileProsecutionSheetDto } from './dto/compile-prosecution-sheet.dto';
 import { TransferStationCaseDto } from './dto/transfer-station-case.dto';
+import { CreateStorageLocationDto } from './dto/create-storage-location.dto';
+import { StationEvidenceIntakeDto } from './dto/station-evidence-intake.dto';
+import { CheckoutEvidenceDto } from './dto/checkout-evidence.dto';
+import { DisposeEvidenceDto } from './dto/dispose-evidence.dto';
 import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -229,6 +233,33 @@ export interface StationCaseAssignmentRecord {
   transferHistory: Array<{ targetOrgId: string; targetLevel: string; reason: string; approvedBy: string; timestamp: string }>;
 }
 
+export interface StorageLocationRecord {
+  id: string;
+  stationId: string;
+  code: string;
+  name: string;
+  locationType: string;
+  isHighSecurity: boolean;
+  itemCount: number;
+}
+
+export interface StationEvidenceRecord {
+  id: string;
+  evidenceNumber: string; // SEVD-2026-STN001-00912
+  stationId: string;
+  caseId: string;
+  category: string;
+  description: string;
+  storageLocationCode: string;
+  barcodeTag: string;
+  intakeOfficerId: string;
+  weightKg?: number;
+  status: 'IN_STORAGE' | 'CHECKED_OUT' | 'DISPOSED' | 'TRANSFERRED';
+  chainOfCustody: Array<{ timestamp: string; action: string; officerId: string; details: string }>;
+  disposalCertificate?: { disposalType: string; authorityRef: string; authorizedBy: string; timestamp: string };
+  createdAt: string;
+}
+
 @Injectable()
 export class StationService {
   private readonly logger = new Logger(StationService.name);
@@ -245,6 +276,8 @@ export class StationService {
   private readonly propertyVoucherStore = new Map<string, PersonPropertyVoucherRecord>();
   private readonly custodyEventsStore = new Map<string, CustodyEventRecord[]>();
   private readonly caseAssignmentsStore = new Map<string, StationCaseAssignmentRecord>();
+  private readonly storageLocationsStore = new Map<string, StorageLocationRecord[]>();
+  private readonly stationEvidenceStore = new Map<string, StationEvidenceRecord[]>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -272,28 +305,33 @@ export class StationService {
     };
     this.profilesStore.set(stationId, profile);
 
-    // Seed Case Assignment
-    const caseAssignment: StationCaseAssignmentRecord = {
-      caseId: 'cas_edo_001',
-      caseNumber: 'CAS-2026-EDO-00912',
-      leadOfficerId: 'off_cid_001',
-      leadOfficerName: 'DSP Chidi Okonkwo',
-      teamOfficerIds: ['off_patrol_001'],
-      supervisorOfficerId: 'off_commander_edo',
-      assignedAt: new Date().toISOString(),
-      checklist: {
-        CRIME_SCENE_VISITED: true,
-        WITNESSES_INTERVIEWED: true,
-        SUSPECT_INTERVIEWED: true,
-        EVIDENCE_COLLECTED: true,
-        FORENSICS_REQUESTED: false,
-        LEGAL_REVIEW_DONE: false,
-        PROSECUTION_FILE_COMPILED: false,
-        COURT_DATE_SET: false,
+    // Seed Storage Locations
+    const locations: StorageLocationRecord[] = [
+      { id: 'loc_001', stationId, code: 'STN001-EVDRM-A-RACK02-BIN05', name: 'Evidence Room A - General Storage Bin 05', locationType: 'LOCKER', isHighSecurity: false, itemCount: 12 },
+      { id: 'loc_002', stationId, code: 'STN001-EVDRM-SAFE-01', name: 'Evidence Room High-Security Firearms Safe', locationType: 'SAFE', isHighSecurity: true, itemCount: 4 },
+      { id: 'loc_003', stationId, code: 'STN001-EVDRM-COLD-01', name: 'Biological Forensics Cold Storage Fridge', locationType: 'COLD_STORAGE', isHighSecurity: true, itemCount: 2 },
+    ];
+    this.storageLocationsStore.set(stationId, locations);
+
+    // Seed Evidence
+    const evidenceRecords: StationEvidenceRecord[] = [
+      {
+        id: 'sevd_001',
+        evidenceNumber: 'SEVD-2026-STN001-00912',
+        stationId,
+        caseId: 'cas_edo_001',
+        category: 'FIREARM',
+        description: 'Beretta 9mm Pistol with 5 live rounds',
+        storageLocationCode: 'STN001-EVDRM-SAFE-01',
+        barcodeTag: 'BC-SEVD-2026-STN001-00912',
+        intakeOfficerId: 'off_cid_001',
+        weightKg: 0.85,
+        status: 'IN_STORAGE',
+        chainOfCustody: [{ timestamp: new Date(Date.now() - 48 * 3600000).toISOString(), action: 'INTAKE_SEALED', officerId: 'off_cid_001', details: 'Physical evidence sealed & placed in High-Security Firearms Safe.' }],
+        createdAt: new Date(Date.now() - 48 * 3600000).toISOString(),
       },
-      transferHistory: [],
-    };
-    this.caseAssignmentsStore.set('cas_edo_001', caseAssignment);
+    ];
+    this.stationEvidenceStore.set(stationId, evidenceRecords);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -902,5 +940,125 @@ export class StationService {
       return caseRecord;
     }
     throw new NotFoundException(`Case Assignment Record ${dto.caseId} not found`);
+  }
+
+  // --- EVIDENCE ROOM & PHYSICAL STORAGE LAYOUT SUBSYSTEM ---
+
+  async createStorageLocation(dto: CreateStorageLocationDto): Promise<StorageLocationRecord> {
+    const record: StorageLocationRecord = {
+      id: `loc_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      stationId: dto.stationId,
+      code: dto.code,
+      name: dto.name,
+      locationType: dto.locationType,
+      isHighSecurity: dto.isHighSecurity || false,
+      itemCount: 0,
+    };
+
+    const existing = this.storageLocationsStore.get(dto.stationId) || [];
+    existing.push(record);
+    this.storageLocationsStore.set(dto.stationId, existing);
+
+    this.logger.log(`Created Station Storage Location Code ${dto.code} (${dto.name})`);
+    return record;
+  }
+
+  async getStorageLocations(stationId: string): Promise<StorageLocationRecord[]> {
+    return this.storageLocationsStore.get(stationId) || [];
+  }
+
+  async processStationEvidenceIntake(dto: StationEvidenceIntakeDto): Promise<StationEvidenceRecord> {
+    const evidenceNumber = `SEVD-2026-STN001-${Math.floor(10000 + Math.random() * 90000)}`;
+    const barcodeTag = `BC-${evidenceNumber}`;
+    const now = new Date().toISOString();
+
+    const record: StationEvidenceRecord = {
+      id: `sevd_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      evidenceNumber,
+      stationId: dto.stationId,
+      caseId: dto.caseId,
+      category: dto.category,
+      description: dto.description,
+      storageLocationCode: dto.storageLocationCode,
+      barcodeTag,
+      intakeOfficerId: dto.intakeOfficerId,
+      weightKg: dto.weightKg,
+      status: 'IN_STORAGE',
+      chainOfCustody: [{ timestamp: now, action: 'INTAKE_SEALED', officerId: dto.intakeOfficerId, details: `Evidence intake sealed & stored at ${dto.storageLocationCode}` }],
+      createdAt: now,
+    };
+
+    const existing = this.stationEvidenceStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.stationEvidenceStore.set(dto.stationId, existing);
+
+    await this.createDiaryEntry({
+      stationId: dto.stationId,
+      officerId: dto.intakeOfficerId,
+      eventType: 'EVIDENCE_RECEIPT',
+      description: `Physical Evidence ${evidenceNumber} (${dto.category}) sealed into location ${dto.storageLocationCode}.`,
+    });
+
+    this.logger.log(`Processed Physical Evidence Intake ${evidenceNumber} (${barcodeTag}) into ${dto.storageLocationCode}`);
+    return record;
+  }
+
+  async checkoutEvidence(dto: CheckoutEvidenceDto): Promise<StationEvidenceRecord> {
+    for (const [, records] of this.stationEvidenceStore.entries()) {
+      const match = records.find((e) => e.id === dto.evidenceId || e.evidenceNumber === dto.evidenceId);
+      if (match) {
+        match.status = 'CHECKED_OUT';
+        match.chainOfCustody.unshift({
+          timestamp: new Date().toISOString(),
+          action: 'CHECKED_OUT',
+          officerId: dto.releasingOfficerId,
+          details: `Checked out for ${dto.purpose} to ${dto.destination}`,
+        });
+        this.logger.log(`Checked out Evidence ${match.evidenceNumber} for ${dto.purpose}`);
+        return match;
+      }
+    }
+    throw new NotFoundException(`Station Evidence ${dto.evidenceId} not found`);
+  }
+
+  async disposeEvidence(dto: DisposeEvidenceDto): Promise<StationEvidenceRecord> {
+    for (const [, records] of this.stationEvidenceStore.entries()) {
+      const match = records.find((e) => e.id === dto.evidenceId || e.evidenceNumber === dto.evidenceId);
+      if (match) {
+        match.status = 'DISPOSED';
+        match.disposalCertificate = {
+          disposalType: dto.disposalType,
+          authorityRef: dto.authorityReference,
+          authorizedBy: dto.authorizingOfficerId,
+          timestamp: new Date().toISOString(),
+        };
+        match.chainOfCustody.unshift({
+          timestamp: new Date().toISOString(),
+          action: 'DISPOSED',
+          officerId: dto.authorizingOfficerId,
+          details: `Disposed via ${dto.disposalType} under Ref ${dto.authorityReference}`,
+        });
+        this.logger.log(`Disposed Evidence ${match.evidenceNumber} under Ref ${dto.authorityReference}`);
+        return match;
+      }
+    }
+    throw new NotFoundException(`Station Evidence ${dto.evidenceId} not found`);
+  }
+
+  async getChainOfCustody(evidenceId: string) {
+    for (const [, records] of this.stationEvidenceStore.entries()) {
+      const match = records.find((e) => e.id === evidenceId || e.evidenceNumber === evidenceId);
+      if (match) {
+        return {
+          evidenceId: match.id,
+          evidenceNumber: match.evidenceNumber,
+          barcodeTag: match.barcodeTag,
+          status: match.status,
+          chainOfCustody: match.chainOfCustody,
+          disposalCertificate: match.disposalCertificate,
+        };
+      }
+    }
+    throw new NotFoundException(`Station Evidence ${evidenceId} not found`);
   }
 }
