@@ -13,6 +13,7 @@ import { BodycamModule } from './bodycam/bodycam.module';
 import { InterStateModule } from './inter-state/inter-state.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { AuditModule } from './audit/audit.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuditModule } from './audit/audit.module';
     InterStateModule,
     IntelligenceModule,
     AuditModule,
+    AnalyticsModule,
   ],
   controllers: [HealthController],
   providers: [],

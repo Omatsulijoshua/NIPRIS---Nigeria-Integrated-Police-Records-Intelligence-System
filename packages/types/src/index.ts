@@ -139,6 +139,19 @@ export enum EvidenceHashVerificationStatus {
   TAMPER_ALERT = "TAMPER_ALERT"
 }
 
+export enum BiometricVerificationStatus {
+  PENDING_HUMAN_VERIFICATION = "PENDING_HUMAN_VERIFICATION",
+  VERIFIED_MATCH = "VERIFIED_MATCH",
+  REJECTED_FALSE_POSITIVE = "REJECTED_FALSE_POSITIVE"
+}
+
+export enum HotspotSeverity {
+  LOW = "LOW",
+  MODERATE = "MODERATE",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL"
+}
+
 export enum DeviceType {
   BODY_WORN_CAMERA = "BODY_WORN_CAMERA",
   DASHCAM = "DASHCAM"
@@ -348,6 +361,55 @@ export interface IdentityResolutionResult {
   notes: string;
 }
 
+export interface BiometricMatchCandidate {
+  personId: string;
+  personName: string;
+  nin?: string;
+  photoUrl?: string;
+  matchConfidencePercentage: number;
+}
+
+export interface BiometricMatchResult {
+  searchId: string;
+  algorithmVersion: string;
+  candidates: BiometricMatchCandidate[];
+  requiresHumanVerification: true; // Mandatory Safety Rule
+  humanVerificationStatus: BiometricVerificationStatus;
+  humanVerifierOfficerId?: string;
+  verifiedAt?: string;
+  verificationNotes?: string;
+}
+
+export interface CrimeHeatmapPoint {
+  lgaName: string;
+  stateName: string;
+  latitude: number;
+  longitude: number;
+  incidentCount: number;
+  severity: HotspotSeverity;
+  timeOfDayDistribution: { morning: number; afternoon: number; night: number; midnight: number };
+}
+
+export interface PredictiveTrendForecast {
+  regionName: string;
+  forecastedSurgeType: string;
+  confidenceScorePercentage: number;
+  recommendedPatrolDensity: string;
+  modusOperandiCluster: string;
+  seasonalPattern: string;
+}
+
+export interface ExecutiveCommandAnalytics {
+  totalIncidents24h: number;
+  totalArrests30d: number;
+  activeWarrantsCount: number;
+  capturedWantedCount: number;
+  evidenceVaultTotalBytes: number;
+  caseClosurePercentage: number;
+  topIncidentState: string;
+  stateBreakdown: Array<{ state: string; incidents: number; arrests: number }>;
+}
+
 export interface AuditLogEntry {
   id: string;
   sequenceIndex: number;
@@ -362,9 +424,9 @@ export interface AuditLogEntry {
   targetResourceId: string;
   justificationRationale: string;
   jurisdictionCode: string;
-  complianceRiskScore: number; // 0-100
+  complianceRiskScore: number;
   previousBlockHash: string;
-  blockHash: string; // SHA-256 Block Hash
+  blockHash: string;
   tamperStatus: AuditTamperStatus;
   internalAffairsFlagged: boolean;
   createdAt: string;
@@ -385,7 +447,7 @@ export interface ConfidentialInformantRecord {
   encryptedTrueIdentity: string;
   handlerOfficerId: string;
   backupHandlerOfficerId?: string;
-  reliabilityRating: string; // e.g. "A1", "B2", "C3"
+  reliabilityRating: string;
   status: InformantStatus;
   createdAt: string;
   updatedAt: string;
@@ -398,7 +460,7 @@ export interface IntelligenceReportRecord {
   rawSummary: string;
   sourceReliability: SourceReliabilityRating;
   informationValidity: InformationValidityRating;
-  evaluationCode: string; // e.g. "A1", "B2"
+  evaluationCode: string;
   classification: ClassificationLevel;
   informantPseudonymId?: string;
   reportingOfficerId: string;
