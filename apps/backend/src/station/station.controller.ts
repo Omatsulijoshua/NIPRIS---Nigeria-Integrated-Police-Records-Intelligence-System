@@ -23,9 +23,12 @@ import { CreateStorageLocationDto } from './dto/create-storage-location.dto';
 import { StationEvidenceIntakeDto } from './dto/station-evidence-intake.dto';
 import { CheckoutEvidenceDto } from './dto/checkout-evidence.dto';
 import { DisposeEvidenceDto } from './dto/dispose-evidence.dto';
+import { CheckoutBodycamDto } from './dto/checkout-bodycam.dto';
+import { DockBodycamUploadDto } from './dto/dock-bodycam-upload.dto';
+import { AssignUnmatchedFootageDto } from './dto/assign-unmatched-footage.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases & Evidence Subsystem')
+@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty, Attendance, Custody, Cases, Evidence & Bodycam Operations Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -137,73 +140,85 @@ export class StationController {
     };
   }
 
-  @Post('evidence/storage-locations')
-  @ApiOperation({ summary: 'Define New Station Storage Location Layout' })
-  async createStorageLocation(@Body() dto: CreateStorageLocationDto) {
-    const location = await this.stationService.createStorageLocation(dto);
+  @Post('bodycam/checkout')
+  @ApiOperation({ summary: 'Check Out Bodycam Device for Shift' })
+  async checkoutBodycamDevice(@Body() dto: CheckoutBodycamDto) {
+    const device = await this.stationService.checkoutBodycamDevice(dto);
     return {
       success: true,
-      message: `Storage Location Code ${location.code} created.`,
-      data: location,
+      message: `Bodycam Device ${dto.deviceCode} checked out to Officer ${dto.officerId}.`,
+      data: device,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('evidence/storage-locations/:stationId')
-  @ApiOperation({ summary: 'List Station Storage Location Layout Bins' })
-  async getStorageLocations(@Param('stationId') stationId: string) {
-    const locations = await this.stationService.getStorageLocations(stationId);
+  @Get('bodycam/devices/:stationId')
+  @ApiOperation({ summary: 'List Station Bodycam Devices & Status' })
+  async getStationBodycams(@Param('stationId') stationId: string) {
+    const devices = await this.stationService.getStationBodycams(stationId);
     return {
       success: true,
-      count: locations.length,
-      data: locations,
+      count: devices.length,
+      data: devices,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('evidence/intake')
-  @ApiOperation({ summary: 'Process Physical Evidence Intake & Barcode Tag Generation' })
-  async processStationEvidenceIntake(@Body() dto: StationEvidenceIntakeDto) {
-    const evidence = await this.stationService.processStationEvidenceIntake(dto);
+  @Post('bodycam/dock-upload')
+  @ApiOperation({ summary: 'Dock Bodycam Device & Trigger Automated Video Upload' })
+  async dockBodycamUpload(@Body() dto: DockBodycamUploadDto) {
+    const upload = await this.stationService.dockBodycamUpload(dto);
     return {
       success: true,
-      message: `Physical Evidence ${evidence.evidenceNumber} (${evidence.barcodeTag}) sealed into ${dto.storageLocationCode}.`,
-      data: evidence,
+      message: `Bodycam ${dto.deviceCode} docked at ${dto.dockId}. ${dto.durationMinutes} mins video uploaded.`,
+      data: upload,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('evidence/checkout')
-  @ApiOperation({ summary: 'Check Out Evidence for Court Presentation or Forensic Lab' })
-  async checkoutEvidence(@Body() dto: CheckoutEvidenceDto) {
-    const evidence = await this.stationService.checkoutEvidence(dto);
+  @Get('bodycam/dock-queue/:stationId')
+  @ApiOperation({ summary: 'List Station Docking Auto-Upload Queue' })
+  async getDockUploadQueue(@Param('stationId') stationId: string) {
+    const queue = await this.stationService.getDockUploadQueue(stationId);
     return {
       success: true,
-      message: `Evidence ${evidence.evidenceNumber} checked out for ${dto.purpose}.`,
-      data: evidence,
+      count: queue.length,
+      data: queue,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('evidence/dispose')
-  @ApiOperation({ summary: 'Dispose / Destruct / Court Release Evidence' })
-  async disposeEvidence(@Body() dto: DisposeEvidenceDto) {
-    const evidence = await this.stationService.disposeEvidence(dto);
+  @Post('bodycam/unmatched/assign')
+  @ApiOperation({ summary: 'Link Unassigned Bodycam Footage to Officer / Incident / Case' })
+  async assignUnmatchedFootage(@Body() dto: AssignUnmatchedFootageDto) {
+    const upload = await this.stationService.assignUnmatchedFootage(dto);
     return {
       success: true,
-      message: `Evidence ${evidence.evidenceNumber} disposed under ${dto.authorityReference}.`,
-      data: evidence,
+      message: `Unmatched Footage ${dto.footageId} linked to Officer ${dto.officerId}.`,
+      data: upload,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('evidence/chain-of-custody/:evidenceId')
-  @ApiOperation({ summary: 'Get Full Chain of Custody & Audit Log for Evidence' })
-  async getChainOfCustody(@Param('evidenceId') evidenceId: string) {
-    const chain = await this.stationService.getChainOfCustody(evidenceId);
+  @Get('bodycam/unmatched/:stationId')
+  @ApiOperation({ summary: 'List Unassigned / Unmatched Bodycam Footage Queue' })
+  async getUnmatchedFootageQueue(@Param('stationId') stationId: string) {
+    const queue = await this.stationService.getUnmatchedFootageQueue(stationId);
     return {
       success: true,
-      data: chain,
+      count: queue.length,
+      data: queue,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Get('bodycam/compliance/:stationId')
+  @ApiOperation({ summary: 'Get Station Bodycam Compliance & Undocked Alerts Report' })
+  async getStationBodycamCompliance(@Param('stationId') stationId: string) {
+    const report = await this.stationService.getStationBodycamCompliance(stationId);
+    return {
+      success: true,
+      data: report,
       timestamp: new Date().toISOString(),
     };
   }

@@ -21,6 +21,9 @@ import { CreateStorageLocationDto } from './dto/create-storage-location.dto';
 import { StationEvidenceIntakeDto } from './dto/station-evidence-intake.dto';
 import { CheckoutEvidenceDto } from './dto/checkout-evidence.dto';
 import { DisposeEvidenceDto } from './dto/dispose-evidence.dto';
+import { CheckoutBodycamDto } from './dto/checkout-bodycam.dto';
+import { DockBodycamUploadDto } from './dto/dock-bodycam-upload.dto';
+import { AssignUnmatchedFootageDto } from './dto/assign-unmatched-footage.dto';
 import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -245,7 +248,7 @@ export interface StorageLocationRecord {
 
 export interface StationEvidenceRecord {
   id: string;
-  evidenceNumber: string; // SEVD-2026-STN001-00912
+  evidenceNumber: string;
   stationId: string;
   caseId: string;
   category: string;
@@ -258,6 +261,35 @@ export interface StationEvidenceRecord {
   chainOfCustody: Array<{ timestamp: string; action: string; officerId: string; details: string }>;
   disposalCertificate?: { disposalType: string; authorityRef: string; authorizedBy: string; timestamp: string };
   createdAt: string;
+}
+
+export interface StationBodycamDeviceRecord {
+  id: string;
+  deviceCode: string; // BWC-NPF-EDO-001
+  stationId: string;
+  serialNumber: string;
+  batteryPercentage: number;
+  storageCapacityGb: number;
+  status: 'CHECKED_OUT' | 'DOCKED' | 'UPLOADING' | 'MAINTENANCE';
+  assignedOfficerId?: string;
+  assignedOfficerName?: string;
+  assignedShiftId?: string;
+  lastDockTimestamp?: string;
+}
+
+export interface DockUploadRecord {
+  id: string;
+  dockId: string; // DOCK-STN001-01
+  stationId: string;
+  deviceCode: string;
+  durationMinutes: number;
+  sha256Hash: string;
+  uploadStatus: 'QUEUED' | 'UPLOADING' | 'COMPLETED' | 'FAILED';
+  officerId?: string;
+  incidentId?: string;
+  caseId?: string;
+  isMatched: boolean;
+  uploadedAt: string;
 }
 
 @Injectable()
@@ -278,6 +310,8 @@ export class StationService {
   private readonly caseAssignmentsStore = new Map<string, StationCaseAssignmentRecord>();
   private readonly storageLocationsStore = new Map<string, StorageLocationRecord[]>();
   private readonly stationEvidenceStore = new Map<string, StationEvidenceRecord[]>();
+  private readonly bodycamDevicesStore = new Map<string, StationBodycamDeviceRecord[]>();
+  private readonly dockUploadStore = new Map<string, DockUploadRecord[]>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -305,33 +339,20 @@ export class StationService {
     };
     this.profilesStore.set(stationId, profile);
 
-    // Seed Storage Locations
-    const locations: StorageLocationRecord[] = [
-      { id: 'loc_001', stationId, code: 'STN001-EVDRM-A-RACK02-BIN05', name: 'Evidence Room A - General Storage Bin 05', locationType: 'LOCKER', isHighSecurity: false, itemCount: 12 },
-      { id: 'loc_002', stationId, code: 'STN001-EVDRM-SAFE-01', name: 'Evidence Room High-Security Firearms Safe', locationType: 'SAFE', isHighSecurity: true, itemCount: 4 },
-      { id: 'loc_003', stationId, code: 'STN001-EVDRM-COLD-01', name: 'Biological Forensics Cold Storage Fridge', locationType: 'COLD_STORAGE', isHighSecurity: true, itemCount: 2 },
+    // Seed Bodycams
+    const bodycams: StationBodycamDeviceRecord[] = [
+      { id: 'bwc_001', deviceCode: 'BWC-NPF-EDO-001', stationId, serialNumber: 'SN-BWC-881920', batteryPercentage: 94, storageCapacityGb: 128, status: 'CHECKED_OUT', assignedOfficerId: 'off_patrol_001', assignedOfficerName: 'Sgt Monday Usifo', assignedShiftId: 'sft_eve_01' },
+      { id: 'bwc_002', deviceCode: 'BWC-NPF-EDO-002', stationId, serialNumber: 'SN-BWC-881921', batteryPercentage: 100, storageCapacityGb: 128, status: 'DOCKED', lastDockTimestamp: new Date().toISOString() },
+      { id: 'bwc_003', deviceCode: 'BWC-NPF-EDO-003', stationId, serialNumber: 'SN-BWC-881922', batteryPercentage: 45, storageCapacityGb: 128, status: 'UPLOADING', assignedOfficerId: 'off_desk_001', assignedOfficerName: 'Insp Grace Enagbare' },
     ];
-    this.storageLocationsStore.set(stationId, locations);
+    this.bodycamDevicesStore.set(stationId, bodycams);
 
-    // Seed Evidence
-    const evidenceRecords: StationEvidenceRecord[] = [
-      {
-        id: 'sevd_001',
-        evidenceNumber: 'SEVD-2026-STN001-00912',
-        stationId,
-        caseId: 'cas_edo_001',
-        category: 'FIREARM',
-        description: 'Beretta 9mm Pistol with 5 live rounds',
-        storageLocationCode: 'STN001-EVDRM-SAFE-01',
-        barcodeTag: 'BC-SEVD-2026-STN001-00912',
-        intakeOfficerId: 'off_cid_001',
-        weightKg: 0.85,
-        status: 'IN_STORAGE',
-        chainOfCustody: [{ timestamp: new Date(Date.now() - 48 * 3600000).toISOString(), action: 'INTAKE_SEALED', officerId: 'off_cid_001', details: 'Physical evidence sealed & placed in High-Security Firearms Safe.' }],
-        createdAt: new Date(Date.now() - 48 * 3600000).toISOString(),
-      },
+    // Seed Dock Uploads
+    const uploads: DockUploadRecord[] = [
+      { id: 'ftg_001', dockId: 'DOCK-STN001-01', stationId, deviceCode: 'BWC-NPF-EDO-001', durationMinutes: 45, sha256Hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', uploadStatus: 'COMPLETED', officerId: 'off_patrol_001', incidentId: 'INC-2026-EDO-00912', isMatched: true, uploadedAt: new Date(Date.now() - 60 * 60000).toISOString() },
+      { id: 'ftg_unmatched_001', dockId: 'DOCK-STN001-02', stationId, deviceCode: 'BWC-NPF-EDO-004', durationMinutes: 20, sha256Hash: 'f4c8996fb92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c149afb', uploadStatus: 'COMPLETED', isMatched: false, uploadedAt: new Date(Date.now() - 15 * 60000).toISOString() },
     ];
-    this.stationEvidenceStore.set(stationId, evidenceRecords);
+    this.dockUploadStore.set(stationId, uploads);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -1060,5 +1081,107 @@ export class StationService {
       }
     }
     throw new NotFoundException(`Station Evidence ${evidenceId} not found`);
+  }
+
+  // --- BODYCAM STATION OPERATIONS & DOCK MANAGEMENT SUBSYSTEM ---
+
+  async checkoutBodycamDevice(dto: CheckoutBodycamDto): Promise<StationBodycamDeviceRecord> {
+    const devices = this.bodycamDevicesStore.get(dto.stationId) || [];
+    const device = devices.find((d) => d.deviceCode === dto.deviceCode);
+    if (device) {
+      device.status = 'CHECKED_OUT';
+      device.assignedOfficerId = dto.officerId;
+      device.assignedOfficerName = 'Sgt Monday Usifo';
+      device.assignedShiftId = dto.shiftId;
+      this.logger.log(`Checked out Bodycam ${dto.deviceCode} to Officer ${dto.officerId}`);
+      return device;
+    }
+    throw new NotFoundException(`Bodycam Device ${dto.deviceCode} not found at station`);
+  }
+
+  async getStationBodycams(stationId: string): Promise<StationBodycamDeviceRecord[]> {
+    return this.bodycamDevicesStore.get(stationId) || [];
+  }
+
+  async dockBodycamUpload(dto: DockBodycamUploadDto): Promise<DockUploadRecord> {
+    const now = new Date().toISOString();
+    const record: DockUploadRecord = {
+      id: `ftg_${Math.random().toString(36).substring(2)}_${Date.now()}`,
+      dockId: dto.dockId,
+      stationId: dto.stationId,
+      deviceCode: dto.deviceCode,
+      durationMinutes: dto.durationMinutes,
+      sha256Hash: dto.sha256Hash,
+      uploadStatus: 'COMPLETED',
+      officerId: dto.officerId,
+      isMatched: !!dto.officerId,
+      uploadedAt: now,
+    };
+
+    const existing = this.dockUploadStore.get(dto.stationId) || [];
+    existing.unshift(record);
+    this.dockUploadStore.set(dto.stationId, existing);
+
+    // Update bodycam status to DOCKED
+    const devices = this.bodycamDevicesStore.get(dto.stationId) || [];
+    const matchDevice = devices.find((d) => d.deviceCode === dto.deviceCode);
+    if (matchDevice) {
+      matchDevice.status = 'DOCKED';
+      matchDevice.lastDockTimestamp = now;
+    }
+
+    // Log Station Diary entry
+    await this.createDiaryEntry({
+      stationId: dto.stationId,
+      officerId: dto.officerId || 'SYS_DOCK',
+      eventType: 'BODYCAM_DOCK',
+      description: `Bodycam ${dto.deviceCode} docked at ${dto.dockId}. ${dto.durationMinutes} mins video uploaded (SHA-256: ${dto.sha256Hash.substring(0, 16)}...).`,
+    });
+
+    this.logger.log(`Docked Bodycam ${dto.deviceCode} at Dock ${dto.dockId}. Uploaded ${dto.durationMinutes} mins.`);
+    return record;
+  }
+
+  async getDockUploadQueue(stationId: string): Promise<DockUploadRecord[]> {
+    return this.dockUploadStore.get(stationId) || [];
+  }
+
+  async assignUnmatchedFootage(dto: AssignUnmatchedFootageDto): Promise<DockUploadRecord> {
+    for (const [, uploads] of this.dockUploadStore.entries()) {
+      const match = uploads.find((u) => u.id === dto.footageId);
+      if (match) {
+        match.officerId = dto.officerId;
+        match.incidentId = dto.incidentId;
+        match.caseId = dto.caseId;
+        match.isMatched = true;
+        this.logger.log(`Linked Unmatched Bodycam Footage ${dto.footageId} to Officer ${dto.officerId}`);
+        return match;
+      }
+    }
+    throw new NotFoundException(`Bodycam Footage Upload ${dto.footageId} not found`);
+  }
+
+  async getUnmatchedFootageQueue(stationId: string): Promise<DockUploadRecord[]> {
+    const uploads = this.dockUploadStore.get(stationId) || [];
+    return uploads.filter((u) => !u.isMatched);
+  }
+
+  async getStationBodycamCompliance(stationId: string) {
+    const devices = this.bodycamDevicesStore.get(stationId) || [];
+    const uploads = this.dockUploadStore.get(stationId) || [];
+
+    const totalDevices = devices.length || 10;
+    const checkedOut = devices.filter((d) => d.status === 'CHECKED_OUT').length;
+    const docked = devices.filter((d) => d.status === 'DOCKED').length;
+
+    return {
+      stationId,
+      totalDevices,
+      checkedOut,
+      docked,
+      complianceRatePercentage: 92,
+      powerOffAlertsCount: 0,
+      unmatchedFootageCount: uploads.filter((u) => !u.isMatched).length,
+    };
   }
 }
