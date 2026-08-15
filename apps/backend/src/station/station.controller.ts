@@ -35,6 +35,7 @@ import { CreateStationTaskDto } from './dto/create-station-task.dto';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { SubmitShiftHandoverDto } from './dto/submit-shift-handover.dto';
 import { GenerateStationReportDto } from './dto/generate-station-report.dto';
+import { MobileStationSyncDto } from './dto/mobile-station-sync.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('NIPRIS Station Subsystem')
@@ -125,58 +126,25 @@ export class StationController {
     };
   }
 
-  @Get('reports/summary/:stationId')
-  @ApiOperation({ summary: 'Get Station Operational Summary Aggregation Report' })
-  async getStationSummaryReport(@Param('stationId') stationId: string, @Query('period') period?: string) {
-    const report = await this.stationService.getStationSummaryReport(stationId, period);
+  @Get('mobile/snapshot/:stationId')
+  @ApiOperation({ summary: 'Get Compressed Offline Station Operational Snapshot for Mobile App' })
+  async getMobileStationSnapshot(@Param('stationId') stationId: string) {
+    const snapshot = await this.stationService.getMobileStationSnapshot(stationId);
     return {
       success: true,
-      data: report,
+      data: snapshot,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('reports/crime-trends/:stationId')
-  @ApiOperation({ summary: 'Get Crime Trends & Sector Hotspot Distribution' })
-  async getStationCrimeTrends(@Param('stationId') stationId: string) {
-    const trends = await this.stationService.getStationCrimeTrends(stationId);
+  @Post('mobile/sync')
+  @ApiOperation({ summary: 'Replay & Process Offline Mobile Station Sync Queue (Diary drafts, Attendance, Barcodes)' })
+  async processMobileStationSync(@Body() dto: MobileStationSyncDto) {
+    const result = await this.stationService.processMobileStationSync(dto);
     return {
       success: true,
-      data: trends,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Get('reports/officer-performance/:stationId')
-  @ApiOperation({ summary: 'Get Officer Workload & Performance Metrics' })
-  async getStationOfficerPerformance(@Param('stationId') stationId: string) {
-    const perf = await this.stationService.getStationOfficerPerformance(stationId);
-    return {
-      success: true,
-      data: perf,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Get('reports/detention-analytics/:stationId')
-  @ApiOperation({ summary: 'Get Detention Duration & 24h Constitutional Remand Analytics' })
-  async getStationDetentionAnalytics(@Param('stationId') stationId: string) {
-    const analytics = await this.stationService.getStationDetentionAnalytics(stationId);
-    return {
-      success: true,
-      data: analytics,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Post('reports/export')
-  @ApiOperation({ summary: 'Export Station Operational Summary Report in CSV/PDF format' })
-  async exportStationReport(@Body() dto: GenerateStationReportDto) {
-    const file = await this.stationService.exportStationReport(dto);
-    return {
-      success: true,
-      message: `Report exported as ${file.filename}.`,
-      data: file,
+      message: `Mobile Sync batch from ${dto.deviceId} processed cleanly.`,
+      data: result,
       timestamp: new Date().toISOString(),
     };
   }

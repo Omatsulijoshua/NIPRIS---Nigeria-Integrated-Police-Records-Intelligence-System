@@ -33,6 +33,7 @@ import { CreateStationTaskDto } from './dto/create-station-task.dto';
 import { CreateApprovalRequestDto } from './dto/create-approval-request.dto';
 import { SubmitShiftHandoverDto } from './dto/submit-shift-handover.dto';
 import { GenerateStationReportDto } from './dto/generate-station-report.dto';
+import { MobileStationSyncDto } from './dto/mobile-station-sync.dto';
 import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
@@ -1692,6 +1693,73 @@ export class StationService {
       filename: `Station_Report_${dto.stationId}_${dto.period}_${Date.now()}.csv`,
       contentType: 'text/csv',
       data: csvContent,
+    };
+  }
+
+  // --- MOBILE STATION COMPANION SUBSYSTEM (FLUTTER INTEGRATION) ---
+
+  async getMobileStationSnapshot(stationId: string) {
+    const profile = await this.getStationProfile(stationId);
+    const units = await this.getStationUnits(stationId);
+    const custody = await this.getCellOccupancyStatus(stationId);
+
+    return {
+      stationId,
+      stationCode: profile.stationCode,
+      lga: profile.lga,
+      unitsCount: units.length,
+      cellOccupancy: `${custody.currentlyDetained}/${custody.capacityLimit}`,
+      syncedAt: new Date().toISOString(),
+    };
+  }
+
+  async processMobileStationSync(dto: MobileStationSyncDto) {
+    let processedDiaryDraftsCount = 0;
+    let processedAttendanceLogsCount = 0;
+    let processedVisitorScansCount = 0;
+
+    if (dto.diaryDrafts && dto.diaryDrafts.length > 0) {
+      for (const draft of dto.diaryDrafts) {
+        await this.createDiaryEntry({
+          stationId: dto.stationId,
+          officerId: dto.deviceOfficerId,
+          eventType: draft.eventType,
+          description: `[MOBILE SYNC - ${dto.deviceId}] ${draft.description}`,
+        });
+        processedDiaryDraftsCount++;
+      }
+    }
+
+    if (dto.attendanceLogs && dto.attendanceLogs.length > 0) {
+      for (const att of dto.attendanceLogs) {
+        if (att.actionType === 'CLOCK_IN') {
+          await this.clockInOfficer({
+            stationId: dto.stationId,
+            officerId: att.officerId,
+            operationalStatus: OperationalStatus.ON_PATROL,
+            notes: `Mobile Clock-In from ${dto.deviceId} (GPS: ${att.latitude || 6.335}, ${att.longitude || 5.603})`,
+          });
+        } else {
+          await this.clockOutOfficer(att.officerId, dto.stationId);
+        }
+        processedAttendanceLogsCount++;
+      }
+    }
+
+    if (dto.visitorScans && dto.visitorScans.length > 0) {
+      processedVisitorScansCount = dto.visitorScans.length;
+    }
+
+    this.logger.log(`Processed Mobile Station Sync Batch from ${dto.deviceId} (${processedDiaryDraftsCount} diary drafts, ${processedAttendanceLogsCount} attendance logs, ${processedVisitorScansCount} visitor scans)`);
+
+    return {
+      stationId: dto.stationId,
+      deviceId: dto.deviceId,
+      processedDiaryDraftsCount,
+      processedAttendanceLogsCount,
+      processedVisitorScansCount,
+      syncTimestamp: new Date().toISOString(),
+      status: 'SUCCESS',
     };
   }
 }
