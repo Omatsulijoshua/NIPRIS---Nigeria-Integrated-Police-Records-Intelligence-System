@@ -7,7 +7,10 @@ import { SearchDiaryEntriesDto } from './dto/search-diary-entries.dto';
 import { CreateComplaintDto } from './dto/create-complaint.dto';
 import { AssignComplaintDto } from './dto/assign-complaint.dto';
 import { ConvertComplaintToIncidentDto } from './dto/convert-complaint-to-incident.dto';
-import { ComplaintStatus, OfficerRole, OrgLevel } from '@nipris/types';
+import { CreateDutyShiftDto } from './dto/create-duty-shift.dto';
+import { ClockInAttendanceDto } from './dto/clock-in-attendance.dto';
+import { UpdateOfficerStatusDto } from './dto/update-officer-status.dto';
+import { ComplaintStatus, OfficerRole, OperationalStatus, OrgLevel, ShiftType } from '@nipris/types';
 
 export interface StationProfileRecord {
   id: string;
@@ -105,7 +108,7 @@ export interface StationDiaryRecord {
 
 export interface StationComplaintRecord {
   id: string;
-  complaintNumber: string; // CMP-2026-STN001-00912
+  complaintNumber: string;
   stationId: string;
   receivedAt: string;
   complainantName: string;
@@ -125,6 +128,40 @@ export interface StationComplaintRecord {
   updatedAt: string;
 }
 
+export interface DutyShiftRecord {
+  id: string;
+  stationId: string;
+  shiftType: ShiftType;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+}
+
+export interface DutyRosterAssignmentRecord {
+  id: string;
+  shiftId: string;
+  shiftName: string;
+  stationId: string;
+  officerId: string;
+  officerName: string;
+  badgeNumber: string;
+  dutyDate: string;
+  notes?: string;
+}
+
+export interface OfficerAttendanceRecord {
+  id: string;
+  officerId: string;
+  officerName: string;
+  stationId: string;
+  clockInTimestamp: string;
+  clockOutTimestamp?: string;
+  operationalStatus: OperationalStatus;
+  shiftId?: string;
+  notes?: string;
+}
+
 @Injectable()
 export class StationService {
   private readonly logger = new Logger(StationService.name);
@@ -133,6 +170,10 @@ export class StationService {
   private readonly officerAssignmentsStore = new Map<string, StationOfficerAssignment[]>();
   private readonly diaryStore = new Map<string, StationDiaryRecord[]>();
   private readonly complaintsStore = new Map<string, StationComplaintRecord[]>();
+  private readonly shiftsStore = new Map<string, DutyShiftRecord[]>();
+  private readonly rosterStore = new Map<string, DutyRosterAssignmentRecord[]>();
+  private readonly attendanceStore = new Map<string, OfficerAttendanceRecord[]>();
+  private readonly officerOperationalStatusStore = new Map<string, OperationalStatus>();
 
   constructor() {
     this.seedDevelopmentStationData();
@@ -178,51 +219,27 @@ export class StationService {
     ];
     this.officerAssignmentsStore.set(stationId, officers);
 
-    // Seed Diary Entries
-    const diaryEntries: StationDiaryRecord[] = [
-      {
-        id: 'sde_001',
-        entryNumber: 'SDE-2026-STN001-00912',
-        stationId,
-        recordedAt: new Date(Date.now() - 30 * 60000).toISOString(),
-        officerId: 'off_desk_001',
-        officerName: 'Insp Grace Enagbare',
-        officerBadge: 'NPF-94102',
-        eventType: 'COMPLAINT_RECEIVED',
-        description: 'Walk-in citizen Chief Emeka Nnamdi reported armed robbery incident at Ring Road.',
-        incidentId: 'INC-2026-EDO-00912',
-        attachments: [],
-        isImmutable: true,
-        versionIndex: 1,
-        auditHistory: [{ timestamp: new Date(Date.now() - 30 * 60000).toISOString(), action: 'ENTRY_CREATED', performedBy: 'Insp Grace Enagbare (NPF-94102)' }],
-        createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
-      },
+    // Seed Shifts
+    const shifts: DutyShiftRecord[] = [
+      { id: 'sft_day_01', stationId, shiftType: ShiftType.DAY, shiftName: 'Morning Duty Shift A', startTime: '08:00', endTime: '16:00', createdAt: new Date().toISOString() },
+      { id: 'sft_eve_01', stationId, shiftType: ShiftType.EVENING, shiftName: 'Evening Patrol Shift B', startTime: '16:00', endTime: '00:00', createdAt: new Date().toISOString() },
+      { id: 'sft_night_01', stationId, shiftType: ShiftType.NIGHT, shiftName: 'Night Surveillance Shift C', startTime: '00:00', endTime: '08:00', createdAt: new Date().toISOString() },
     ];
-    this.diaryStore.set(stationId, diaryEntries);
+    this.shiftsStore.set(stationId, shifts);
 
-    // Seed Complaints
-    const complaints: StationComplaintRecord[] = [
-      {
-        id: 'cmp_001',
-        complaintNumber: 'CMP-2026-STN001-00912',
-        stationId,
-        receivedAt: new Date(Date.now() - 60 * 60000).toISOString(),
-        complainantName: 'Chief Emeka Nnamdi',
-        complainantPhone: '+234-803-555-0192',
-        originSource: 'WALK_IN_CITIZEN',
-        category: 'ARMED_ROBBERY',
-        description: 'Complainant states armed robbers invaded premises along Ring Road at 02:00 hours.',
-        locationName: 'Ring Road, Benin City',
-        receivingOfficerId: 'off_desk_001',
-        assignedOfficerId: 'off_cid_001',
-        assignedOfficerName: 'DSP Chidi Okonkwo',
-        status: ComplaintStatus.CONVERTED_TO_INCIDENT,
-        resultingIncidentId: 'INC-2026-EDO-00912',
-        createdAt: new Date(Date.now() - 60 * 60000).toISOString(),
-        updatedAt: new Date(Date.now() - 60 * 60000).toISOString(),
-      },
+    // Seed Roster
+    const roster: DutyRosterAssignmentRecord[] = [
+      { id: 'rst_001', shiftId: 'sft_day_01', shiftName: 'Morning Duty Shift A', stationId, officerId: 'off_desk_001', officerName: 'Insp Grace Enagbare', badgeNumber: 'NPF-94102', dutyDate: new Date().toISOString().split('T')[0], notes: 'Station Counter Desk Guard' },
+      { id: 'rst_002', shiftId: 'sft_eve_01', shiftName: 'Evening Patrol Shift B', stationId, officerId: 'off_patrol_001', officerName: 'Sgt Monday Usifo', badgeNumber: 'NPF-66120', dutyDate: new Date().toISOString().split('T')[0], notes: 'Expressway Response Vehicle NPF-EDO-01' },
     ];
-    this.complaintsStore.set(stationId, complaints);
+    this.rosterStore.set(stationId, roster);
+
+    // Seed Attendance
+    const attendance: OfficerAttendanceRecord[] = [
+      { id: 'att_001', officerId: 'off_desk_001', officerName: 'Insp Grace Enagbare', stationId, clockInTimestamp: new Date(Date.now() - 4 * 3600000).toISOString(), operationalStatus: OperationalStatus.ON_DUTY, shiftId: 'sft_day_01' },
+      { id: 'att_002', officerId: 'off_patrol_001', officerName: 'Sgt Monday Usifo', stationId, clockInTimestamp: new Date(Date.now() - 2 * 3600000).toISOString(), operationalStatus: OperationalStatus.ON_PATROL, shiftId: 'sft_eve_01' },
+    ];
+    this.attendanceStore.set(stationId, attendance);
   }
 
   // --- STATION PROFILE MANAGEMENT ---
@@ -357,162 +374,83 @@ export class StationService {
     ];
   }
 
-  // --- DIGITAL STATION DIARY SUBSYSTEM ---
+  // --- DUTY SHIFTS & ROSTER SUBSYSTEM ---
 
-  async createDiaryEntry(dto: CreateDiaryEntryDto): Promise<StationDiaryRecord> {
-    const entryNumber = `SDE-2026-STN001-${Math.floor(10000 + Math.random() * 90000)}`;
-    const now = new Date().toISOString();
-
-    const record: StationDiaryRecord = {
-      id: `sde_${Math.random().toString(36).substring(2)}_${Date.now()}`,
-      entryNumber,
+  async createDutyShift(dto: CreateDutyShiftDto): Promise<DutyShiftRecord> {
+    const record: DutyShiftRecord = {
+      id: `sft_${Math.random().toString(36).substring(2)}_${Date.now()}`,
       stationId: dto.stationId,
-      recordedAt: now,
+      shiftType: dto.shiftType,
+      shiftName: dto.shiftName,
+      startTime: dto.startTime,
+      endTime: dto.endTime,
+      createdAt: new Date().toISOString(),
+    };
+
+    const existing = this.shiftsStore.get(dto.stationId) || [];
+    existing.push(record);
+    this.shiftsStore.set(dto.stationId, existing);
+
+    this.logger.log(`Created Station Duty Shift ${dto.shiftName} (${dto.startTime}-${dto.endTime})`);
+    return record;
+  }
+
+  async getDutyShifts(stationId: string): Promise<DutyShiftRecord[]> {
+    return this.shiftsStore.get(stationId) || [];
+  }
+
+  async getDutyRoster(stationId: string): Promise<DutyRosterAssignmentRecord[]> {
+    return this.rosterStore.get(stationId) || [];
+  }
+
+  // --- OFFICER ATTENDANCE & OPERATIONAL STATUS ---
+
+  async clockInOfficer(dto: ClockInAttendanceDto): Promise<OfficerAttendanceRecord> {
+    const now = new Date().toISOString();
+    const record: OfficerAttendanceRecord = {
+      id: `att_${Math.random().toString(36).substring(2)}_${Date.now()}`,
       officerId: dto.officerId,
       officerName: 'Insp Grace Enagbare',
-      officerBadge: 'NPF-94102',
-      eventType: dto.eventType,
-      description: dto.description,
-      incidentId: dto.incidentId,
-      caseId: dto.caseId,
-      personId: dto.personId,
-      vehicleId: dto.vehicleId,
-      evidenceId: dto.evidenceId,
-      attachments: dto.attachments || [],
-      isImmutable: true,
-      versionIndex: 1,
-      auditHistory: [{ timestamp: now, action: 'ENTRY_CREATED_IMMUTABLE', performedBy: `Officer ${dto.officerId}` }],
-      createdAt: now,
+      stationId: dto.stationId,
+      clockInTimestamp: now,
+      operationalStatus: dto.operationalStatus,
+      shiftId: dto.shiftId,
+      notes: dto.notes,
     };
 
-    const existing = this.diaryStore.get(dto.stationId) || [];
+    const existing = this.attendanceStore.get(dto.stationId) || [];
     existing.unshift(record);
-    this.diaryStore.set(dto.stationId, existing);
+    this.attendanceStore.set(dto.stationId, existing);
 
-    this.logger.log(`Created Immutable Digital Station Diary Entry ${entryNumber} (Event: ${dto.eventType})`);
+    this.officerOperationalStatusStore.set(dto.officerId, dto.operationalStatus);
+    this.logger.log(`Officer ${dto.officerId} Clocked IN at Station ${dto.stationId} (Status: ${dto.operationalStatus})`);
     return record;
   }
 
-  async getDiaryEntries(stationId: string): Promise<StationDiaryRecord[]> {
-    return this.diaryStore.get(stationId) || [];
-  }
-
-  async searchDiaryEntries(stationId: string, dto: SearchDiaryEntriesDto): Promise<StationDiaryRecord[]> {
-    const all = this.diaryStore.get(stationId) || [];
-    return all.filter((entry) => {
-      if (dto.eventType && entry.eventType !== dto.eventType) return false;
-      if (dto.officerId && entry.officerId !== dto.officerId) return false;
-      if (dto.searchQuery) {
-        const query = dto.searchQuery.toLowerCase();
-        const matchNumber = entry.entryNumber.toLowerCase().includes(query);
-        const matchDesc = entry.description.toLowerCase().includes(query);
-        return matchNumber || matchDesc;
-      }
-      return true;
-    });
-  }
-
-  async getDiaryEntryTimeline(entryId: string) {
-    for (const [, entries] of this.diaryStore.entries()) {
-      const match = entries.find((e) => e.id === entryId || e.entryNumber === entryId);
-      if (match) {
-        return {
-          entryId: match.id,
-          entryNumber: match.entryNumber,
-          isImmutable: match.isImmutable,
-          versionIndex: match.versionIndex,
-          auditHistory: match.auditHistory,
-        };
-      }
+  async clockOutOfficer(officerId: string, stationId: string): Promise<OfficerAttendanceRecord> {
+    const records = this.attendanceStore.get(stationId) || [];
+    const activeRecord = records.find((r) => r.officerId === officerId && !r.clockOutTimestamp);
+    if (activeRecord) {
+      activeRecord.clockOutTimestamp = new Date().toISOString();
+      activeRecord.operationalStatus = OperationalStatus.OFF_DUTY;
+      this.officerOperationalStatusStore.set(officerId, OperationalStatus.OFF_DUTY);
+      this.logger.log(`Officer ${officerId} Clocked OUT from Station ${stationId}`);
+      return activeRecord;
     }
-    throw new NotFoundException(`Station Diary Entry ${entryId} not found`);
+    throw new NotFoundException(`Active Clock-in attendance record for Officer ${officerId} not found`);
   }
 
-  // --- STATION COMPLAINT MANAGEMENT SUBSYSTEM ---
+  async getAttendanceLogs(stationId: string): Promise<OfficerAttendanceRecord[]> {
+    return this.attendanceStore.get(stationId) || [];
+  }
 
-  async createComplaint(dto: CreateComplaintDto): Promise<StationComplaintRecord> {
-    const complaintNumber = `CMP-2026-STN001-${Math.floor(10000 + Math.random() * 90000)}`;
-    const now = new Date().toISOString();
-
-    const record: StationComplaintRecord = {
-      id: `cmp_${Math.random().toString(36).substring(2)}_${Date.now()}`,
-      complaintNumber,
-      stationId: dto.stationId,
-      receivedAt: now,
-      complainantName: dto.complainantName,
-      complainantPhone: dto.complainantPhone,
-      complainantPersonId: dto.complainantPersonId,
-      originSource: dto.originSource,
-      category: dto.category,
-      description: dto.description,
-      locationName: dto.locationName,
-      receivingOfficerId: dto.receivingOfficerId,
-      status: ComplaintStatus.NEW,
-      createdAt: now,
-      updatedAt: now,
+  async updateOfficerOperationalStatus(dto: UpdateOfficerStatusDto) {
+    this.officerOperationalStatusStore.set(dto.officerId, dto.operationalStatus);
+    this.logger.log(`Updated Operational Status for Officer ${dto.officerId} -> ${dto.operationalStatus}`);
+    return {
+      officerId: dto.officerId,
+      operationalStatus: dto.operationalStatus,
+      updatedAt: new Date().toISOString(),
     };
-
-    const existing = this.complaintsStore.get(dto.stationId) || [];
-    existing.unshift(record);
-    this.complaintsStore.set(dto.stationId, existing);
-
-    // Automatically log in Station Diary
-    await this.createDiaryEntry({
-      stationId: dto.stationId,
-      officerId: dto.receivingOfficerId,
-      eventType: 'COMPLAINT_RECEIVED',
-      description: `Complaint ${complaintNumber} received from ${dto.complainantName}: ${dto.category}`,
-    });
-
-    this.logger.log(`Created Station Complaint ${complaintNumber} from ${dto.complainantName}`);
-    return record;
-  }
-
-  async getStationComplaints(stationId: string): Promise<StationComplaintRecord[]> {
-    return this.complaintsStore.get(stationId) || [];
-  }
-
-  async assignComplaint(dto: AssignComplaintDto): Promise<StationComplaintRecord> {
-    for (const [, complaints] of this.complaintsStore.entries()) {
-      const match = complaints.find((c) => c.id === dto.complaintId || c.complaintNumber === dto.complaintId);
-      if (match) {
-        match.assignedOfficerId = dto.assignedOfficerId;
-        match.assignedOfficerName = 'DSP Chidi Okonkwo';
-        match.status = ComplaintStatus.ASSIGNED;
-        match.updatedAt = new Date().toISOString();
-        this.logger.log(`Assigned Complaint ${match.complaintNumber} to Officer ${dto.assignedOfficerId}`);
-        return match;
-      }
-    }
-    throw new NotFoundException(`Complaint ${dto.complaintId} not found`);
-  }
-
-  async convertComplaintToIncident(dto: ConvertComplaintToIncidentDto): Promise<{ complaint: StationComplaintRecord; incidentNumber: string }> {
-    for (const [, complaints] of this.complaintsStore.entries()) {
-      const match = complaints.find((c) => c.id === dto.complaintId || c.complaintNumber === dto.complaintId);
-      if (match) {
-        const incidentNumber = `INC-2026-EDO-${Math.floor(10000 + Math.random() * 90000)}`;
-        match.resultingIncidentId = incidentNumber;
-        match.status = ComplaintStatus.CONVERTED_TO_INCIDENT;
-        match.updatedAt = new Date().toISOString();
-
-        this.logger.log(`Converted Complaint ${match.complaintNumber} to Incident ${incidentNumber}`);
-        return { complaint: match, incidentNumber };
-      }
-    }
-    throw new NotFoundException(`Complaint ${dto.complaintId} not found`);
-  }
-
-  async closeComplaint(complaintId: string, resolutionNotes: string): Promise<StationComplaintRecord> {
-    for (const [, complaints] of this.complaintsStore.entries()) {
-      const match = complaints.find((c) => c.id === complaintId || c.complaintNumber === complaintId);
-      if (match) {
-        match.status = ComplaintStatus.CLOSED;
-        match.updatedAt = new Date().toISOString();
-        this.logger.log(`Closed Complaint ${match.complaintNumber} without arrest: ${resolutionNotes}`);
-        return match;
-      }
-    }
-    throw new NotFoundException(`Complaint ${complaintId} not found`);
   }
 }

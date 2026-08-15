@@ -9,9 +9,12 @@ import { SearchDiaryEntriesDto } from './dto/search-diary-entries.dto';
 import { CreateComplaintDto } from './dto/create-complaint.dto';
 import { AssignComplaintDto } from './dto/assign-complaint.dto';
 import { ConvertComplaintToIncidentDto } from './dto/convert-complaint-to-incident.dto';
+import { CreateDutyShiftDto } from './dto/create-duty-shift.dto';
+import { ClockInAttendanceDto } from './dto/clock-in-attendance.dto';
+import { UpdateOfficerStatusDto } from './dto/update-officer-status.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-@ApiTags('NIPRIS Station Organization, Command, Diary & Complaints Subsystem')
+@ApiTags('NIPRIS Station Organization, Command, Diary, Complaints, Duty & Attendance Subsystem')
 @Controller('station')
 @UseGuards(JwtAuthGuard)
 export class StationController {
@@ -123,109 +126,86 @@ export class StationController {
     };
   }
 
-  @Post('diary')
-  @ApiOperation({ summary: 'Create Immutable Digital Station Diary Entry' })
-  async createDiaryEntry(@Body() dto: CreateDiaryEntryDto) {
-    const entry = await this.stationService.createDiaryEntry(dto);
+  @Post('duty/shifts')
+  @ApiOperation({ summary: 'Define New Station Duty Shift Schedule' })
+  async createDutyShift(@Body() dto: CreateDutyShiftDto) {
+    const shift = await this.stationService.createDutyShift(dto);
     return {
       success: true,
-      message: `Immutable Station Diary Entry ${entry.entryNumber} logged cleanly.`,
-      data: entry,
+      message: `Shift ${shift.shiftName} created.`,
+      data: shift,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('diary/:stationId')
-  @ApiOperation({ summary: 'List Digital Station Diary Entries for Station' })
-  async getDiaryEntries(@Param('stationId') stationId: string) {
-    const entries = await this.stationService.getDiaryEntries(stationId);
+  @Get('duty/shifts/:stationId')
+  @ApiOperation({ summary: 'List Station Duty Shift Schedules' })
+  async getDutyShifts(@Param('stationId') stationId: string) {
+    const shifts = await this.stationService.getDutyShifts(stationId);
     return {
       success: true,
-      count: entries.length,
-      data: entries,
+      count: shifts.length,
+      data: shifts,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('diary/search/:stationId')
-  @ApiOperation({ summary: 'Search Digital Station Diary Entries with Event & Keyword Filters' })
-  async searchDiaryEntries(@Param('stationId') stationId: string, @Body() dto: SearchDiaryEntriesDto) {
-    const results = await this.stationService.searchDiaryEntries(stationId, dto);
+  @Get('duty/roster/:stationId')
+  @ApiOperation({ summary: 'Get Station Officer Duty Roster' })
+  async getDutyRoster(@Param('stationId') stationId: string) {
+    const roster = await this.stationService.getDutyRoster(stationId);
     return {
       success: true,
-      count: results.length,
-      data: results,
+      count: roster.length,
+      data: roster,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('diary/entry/:id/timeline')
-  @ApiOperation({ summary: 'Get Audit History & Version Timeline for Station Diary Entry' })
-  async getDiaryEntryTimeline(@Param('id') id: string) {
-    const timeline = await this.stationService.getDiaryEntryTimeline(id);
+  @Post('attendance/clock-in')
+  @ApiOperation({ summary: 'Clock-In Officer Shift Attendance' })
+  async clockInOfficer(@Body() dto: ClockInAttendanceDto) {
+    const log = await this.stationService.clockInOfficer(dto);
     return {
       success: true,
-      data: timeline,
+      message: `Officer ${dto.officerId} Clocked IN cleanly.`,
+      data: log,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('complaints')
-  @ApiOperation({ summary: 'Intake New Citizen or Officer Complaint' })
-  async createComplaint(@Body() dto: CreateComplaintDto) {
-    const complaint = await this.stationService.createComplaint(dto);
+  @Post('attendance/clock-out')
+  @ApiOperation({ summary: 'Clock-Out Officer Shift Attendance' })
+  async clockOutOfficer(@Body('officerId') officerId: string, @Body('stationId') stationId: string) {
+    const log = await this.stationService.clockOutOfficer(officerId, stationId);
     return {
       success: true,
-      message: `Complaint ${complaint.complaintNumber} registered cleanly.`,
-      data: complaint,
+      message: `Officer ${officerId} Clocked OUT cleanly.`,
+      data: log,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Get('complaints/:stationId')
-  @ApiOperation({ summary: 'List Station Complaints' })
-  async getStationComplaints(@Param('stationId') stationId: string) {
-    const complaints = await this.stationService.getStationComplaints(stationId);
+  @Get('attendance/logs/:stationId')
+  @ApiOperation({ summary: 'List Officer Attendance Logs for Station' })
+  async getAttendanceLogs(@Param('stationId') stationId: string) {
+    const logs = await this.stationService.getAttendanceLogs(stationId);
     return {
       success: true,
-      count: complaints.length,
-      data: complaints,
+      count: logs.length,
+      data: logs,
       timestamp: new Date().toISOString(),
     };
   }
 
-  @Post('complaints/assign')
-  @ApiOperation({ summary: 'Assign Complaint to Investigating Officer' })
-  async assignComplaint(@Body() dto: AssignComplaintDto) {
-    const complaint = await this.stationService.assignComplaint(dto);
+  @Post('officers/status')
+  @ApiOperation({ summary: 'Update Officer Operational Duty Status' })
+  async updateOfficerStatus(@Body() dto: UpdateOfficerStatusDto) {
+    const result = await this.stationService.updateOfficerOperationalStatus(dto);
     return {
       success: true,
-      message: `Complaint ${complaint.complaintNumber} assigned to Officer ${dto.assignedOfficerId}.`,
-      data: complaint,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Post('complaints/convert-to-incident')
-  @ApiOperation({ summary: 'Convert Station Complaint to Formal Incident' })
-  async convertComplaintToIncident(@Body() dto: ConvertComplaintToIncidentDto) {
-    const result = await this.stationService.convertComplaintToIncident(dto);
-    return {
-      success: true,
-      message: `Complaint ${result.complaint.complaintNumber} converted to Incident ${result.incidentNumber}.`,
+      message: `Officer ${dto.officerId} status updated to ${dto.operationalStatus}.`,
       data: result,
-      timestamp: new Date().toISOString(),
-    };
-  }
-
-  @Post('complaints/:id/close')
-  @ApiOperation({ summary: 'Close Complaint Without Forced Arrest' })
-  async closeComplaint(@Param('id') id: string, @Body('resolutionNotes') notes: string) {
-    const complaint = await this.stationService.closeComplaint(id, notes || 'Resolved administratively');
-    return {
-      success: true,
-      message: `Complaint ${complaint.complaintNumber} closed.`,
-      data: complaint,
       timestamp: new Date().toISOString(),
     };
   }

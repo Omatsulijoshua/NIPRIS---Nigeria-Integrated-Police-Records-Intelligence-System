@@ -101,6 +101,28 @@ export enum ComplaintStatus {
   CLOSED = "CLOSED"
 }
 
+export enum ShiftType {
+  DAY = "DAY",
+  EVENING = "EVENING",
+  NIGHT = "NIGHT",
+  PATROL = "PATROL",
+  INVESTIGATION = "INVESTIGATION",
+  DESK = "DESK",
+  SPECIAL_ASSIGNMENT = "SPECIAL_ASSIGNMENT"
+}
+
+export enum OperationalStatus {
+  ON_DUTY = "ON_DUTY",
+  OFF_DUTY = "OFF_DUTY",
+  ON_PATROL = "ON_PATROL",
+  AT_STATION = "AT_STATION",
+  ON_ASSIGNMENT = "ON_ASSIGNMENT",
+  ON_LEAVE = "ON_LEAVE",
+  SUSPENDED = "SUSPENDED",
+  UNAVAILABLE = "UNAVAILABLE",
+  EMERGENCY_ASSIGNMENT = "EMERGENCY_ASSIGNMENT"
+}
+
 export enum IncidentPersonRole {
   SUSPECT = "SUSPECT",
   VICTIM = "VICTIM",
