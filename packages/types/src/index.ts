@@ -103,6 +103,33 @@ export enum CaseStatus {
   REOPENED = "REOPENED"
 }
 
+export enum WarrantType {
+  ARREST_WARRANT = "ARREST_WARRANT",
+  SEARCH_WARRANT = "SEARCH_WARRANT",
+  BENCH_WARRANT = "BENCH_WARRANT"
+}
+
+export enum WarrantStatus {
+  ACTIVE = "ACTIVE",
+  EXECUTED = "EXECUTED",
+  CANCELLED = "CANCELLED",
+  EXPIRED = "EXPIRED",
+  SUSPENDED = "SUSPENDED"
+}
+
+export enum WantedRiskLevel {
+  EXTREMELY_DANGEROUS = "EXTREMELY_DANGEROUS",
+  ARMED_AND_DANGEROUS = "ARMED_AND_DANGEROUS",
+  FLIGHT_RISK = "FLIGHT_RISK"
+}
+
+export enum WantedStatus {
+  ACTIVE = "ACTIVE",
+  CAPTURED = "CAPTURED",
+  DECEASED = "DECEASED",
+  CLEARED = "CLEARED"
+}
+
 export enum LegalStatus {
   ARREST = "ARREST",
   CHARGE = "CHARGE",
@@ -128,14 +155,6 @@ export enum IdentityMatchStatus {
   MATCH = "MATCH",
   POSSIBLE_MATCH = "POSSIBLE_MATCH",
   NO_MATCH = "NO_MATCH"
-}
-
-export enum WarrantStatus {
-  ACTIVE = "ACTIVE",
-  EXECUTED = "EXECUTED",
-  CANCELLED = "CANCELLED",
-  EXPIRED = "EXPIRED",
-  SUSPENDED = "SUSPENDED"
 }
 
 export interface UserSessionPayload {
@@ -204,6 +223,50 @@ export interface IdentityResolutionResult {
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface JudicialAuthorityMetadata {
+  issuingJudgeName: string;
+  courtName: string;
+  jurisdiction: string;
+  courtSealNumber: string;
+}
+
+export interface WarrantRecord {
+  id: string;
+  warrantNumber: string;
+  warrantType: WarrantType;
+  targetPersonId: string;
+  targetPersonName: string;
+  caseId?: string;
+  incidentId?: string;
+  judicialAuthority: JudicialAuthorityMetadata;
+  offenseAllegations: string;
+  issueDate: string;
+  expirationDate: string;
+  status: WarrantStatus;
+  state: string;
+  executingOfficerId?: string;
+  executedAt?: string;
+  executionLocation?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WantedPersonRecord {
+  id: string;
+  personId: string;
+  personName: string;
+  photoUrl?: string;
+  caseId?: string;
+  warrantIds: string[];
+  riskLevel: WantedRiskLevel;
+  bountyAmount?: number;
+  publicCircular: boolean;
+  status: WantedStatus;
+  remarks: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ArrestRecord {
