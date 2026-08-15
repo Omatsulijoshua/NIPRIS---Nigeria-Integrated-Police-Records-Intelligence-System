@@ -10,9 +10,10 @@ import { CasesModule } from './cases/cases.module';
 import { WarrantsModule } from './warrants/warrants.module';
 import { EvidenceModule } from './evidence/evidence.module';
 import { BodycamModule } from './bodycam/bodycam.module';
+import { InterStateModule } from './inter-state/inter-state.module';
 
 @Module({
-  imports: [AuthModule, OrganizationsModule, OfficersModule, PersonsModule, IncidentsModule, ArrestsModule, CasesModule, WarrantsModule, EvidenceModule, BodycamModule],
+  imports: [AuthModule, OrganizationsModule, OfficersModule, PersonsModule, IncidentsModule, ArrestsModule, CasesModule, WarrantsModule, EvidenceModule, BodycamModule, InterStateModule],
   controllers: [HealthController],
   providers: [],
 })

@@ -164,6 +164,28 @@ export enum RedactionStatus {
   MASKING_PREVIEW = "MASKING_PREVIEW"
 }
 
+export enum InterStateRequestPriority {
+  ROUTINE = "ROUTINE",
+  URGENT = "URGENT",
+  EMERGENCY = "EMERGENCY"
+}
+
+export enum InterStateRequestStatus {
+  PENDING_APPROVAL = "PENDING_APPROVAL",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  EMERGENCY_OVERRIDDEN = "EMERGENCY_OVERRIDDEN",
+  EXPIRED = "EXPIRED"
+}
+
+export enum InterStateRecordType {
+  PERSON_PROFILE = "PERSON_PROFILE",
+  CRIMINAL_ARREST = "CRIMINAL_ARREST",
+  CASE_FILE = "CASE_FILE",
+  INTELLIGENCE_BULLETIN = "INTELLIGENCE_BULLETIN",
+  DIGITAL_EVIDENCE = "DIGITAL_EVIDENCE"
+}
+
 export enum WantedRiskLevel {
   EXTREMELY_DANGEROUS = "EXTREMELY_DANGEROUS",
   ARMED_AND_DANGEROUS = "ARMED_AND_DANGEROUS",
@@ -270,6 +292,46 @@ export interface IdentityResolutionResult {
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface InterStateRecordRequest {
+  id: string;
+  requestNumber: string;
+  originatingOfficerId: string;
+  originatingState: string;
+  targetState: string;
+  recordType: InterStateRecordType;
+  targetRecordId: string;
+  justificationRationale: string;
+  priority: InterStateRequestPriority;
+  status: InterStateRequestStatus;
+  approvingOfficerId?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
+  expirationDate: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmergencyJurisdictionOverride {
+  id: string;
+  officerId: string;
+  officerState: string;
+  targetRecordId: string;
+  targetRecordState: string;
+  mandatoryRationale: string;
+  timestamp: string;
+  auditSeverity: "HIGH_ALERT_AUDIT_LOGGED";
+  flaggedForNationalHq: boolean;
+}
+
+export interface NationalHqStateOversightSummary {
+  stateName: string;
+  totalOutgoingRequests: number;
+  totalIncomingRequests: number;
+  approvedCount: number;
+  rejectedCount: number;
+  emergencyOverridesCount: number;
 }
 
 export interface CameraDevice {
