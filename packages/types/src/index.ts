@@ -186,6 +186,31 @@ export enum InterStateRecordType {
   DIGITAL_EVIDENCE = "DIGITAL_EVIDENCE"
 }
 
+export enum SourceReliabilityRating {
+  A_COMPLETELY_RELIABLE = "A_COMPLETELY_RELIABLE",
+  B_USUALLY_RELIABLE = "B_USUALLY_RELIABLE",
+  C_FAIRLY_RELIABLE = "C_FAIRLY_RELIABLE",
+  D_NOT_USUALLY_RELIABLE = "D_NOT_USUALLY_RELIABLE",
+  E_UNRELIABLE = "E_UNRELIABLE",
+  F_CANNOT_BE_JUDGED = "F_CANNOT_BE_JUDGED"
+}
+
+export enum InformationValidityRating {
+  V1_CONFIRMED = "V1_CONFIRMED",
+  V2_PROBABLY_TRUE = "V2_PROBABLY_TRUE",
+  V3_POSSIBLY_TRUE = "V3_POSSIBLY_TRUE",
+  V4_DOUBTFUL = "V4_DOUBTFUL",
+  V5_IMPROBABLE = "V5_IMPROBABLE",
+  V6_CANNOT_BE_JUDGED = "V6_CANNOT_BE_JUDGED"
+}
+
+export enum InformantStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  COMPROMISED = "COMPROMISED",
+  DECOMMISSIONED = "DECOMMISSIONED"
+}
+
 export enum WantedRiskLevel {
   EXTREMELY_DANGEROUS = "EXTREMELY_DANGEROUS",
   ARMED_AND_DANGEROUS = "ARMED_AND_DANGEROUS",
@@ -217,7 +242,9 @@ export enum ClassificationLevel {
   HIGHLY_RESTRICTED = "HIGHLY_RESTRICTED",
   SEALED = "SEALED",
   BIOMETRIC_RESTRICTED = "BIOMETRIC_RESTRICTED",
-  EVIDENCE_RESTRICTED = "EVIDENCE_RESTRICTED"
+  EVIDENCE_RESTRICTED = "EVIDENCE_RESTRICTED",
+  CONFIDENTIAL_INTEL = "CONFIDENTIAL_INTEL",
+  TOP_SECRET_LAW_ENFORCEMENT = "TOP_SECRET_LAW_ENFORCEMENT"
 }
 
 export enum IdentityMatchStatus {
@@ -292,6 +319,36 @@ export interface IdentityResolutionResult {
   possibleCandidates: PersonMasterRecord[];
   requiresHumanVerification: boolean;
   notes: string;
+}
+
+export interface ConfidentialInformantRecord {
+  id: string;
+  pseudonymCodeName: string;
+  encryptedTrueIdentity: string;
+  handlerOfficerId: string;
+  backupHandlerOfficerId?: string;
+  reliabilityRating: string; // e.g. "A1", "B2", "C3"
+  status: InformantStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IntelligenceReportRecord {
+  id: string;
+  reportNumber: string;
+  title: string;
+  rawSummary: string;
+  sourceReliability: SourceReliabilityRating;
+  informationValidity: InformationValidityRating;
+  evaluationCode: string; // e.g. "A1", "B2"
+  classification: ClassificationLevel;
+  informantPseudonymId?: string;
+  reportingOfficerId: string;
+  targetCaseId?: string;
+  targetIncidentId?: string;
+  disseminationClearance: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface InterStateRecordRequest {

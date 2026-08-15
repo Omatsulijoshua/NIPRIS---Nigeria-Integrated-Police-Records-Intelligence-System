@@ -11,9 +11,10 @@ import { WarrantsModule } from './warrants/warrants.module';
 import { EvidenceModule } from './evidence/evidence.module';
 import { BodycamModule } from './bodycam/bodycam.module';
 import { InterStateModule } from './inter-state/inter-state.module';
+import { IntelligenceModule } from './intelligence/intelligence.module';
 
 @Module({
-  imports: [AuthModule, OrganizationsModule, OfficersModule, PersonsModule, IncidentsModule, ArrestsModule, CasesModule, WarrantsModule, EvidenceModule, BodycamModule, InterStateModule],
+  imports: [AuthModule, OrganizationsModule, OfficersModule, PersonsModule, IncidentsModule, ArrestsModule, CasesModule, WarrantsModule, EvidenceModule, BodycamModule, InterStateModule, IntelligenceModule],
   controllers: [HealthController],
   providers: [],
 })
